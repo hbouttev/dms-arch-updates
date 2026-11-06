@@ -9,6 +9,8 @@ a terminal:
 - mise tools go through **`mise upgrade --global`**, which stays within the versions requested
   in `~/.config/mise/config.toml`.
 
+Updates open in your terminal, chosen the same way DMS chooses it (see [Terminal](#terminal)).
+
 The plugin only checks, displays and launches. It never runs an update on its own.
 
 ## Surfaces
@@ -18,7 +20,7 @@ The plugin only checks, displays and launches. It never runs an update on its ow
 | Bar pill | Icon and update count. Hidden, taking no space, when there is nothing to update. Background checks never make it appear or flash. Click: popout. Right click: dashboard tab. The icon turns to the warning color if some check failed. |
 | Popout | Sources with updates or problems, a re-check button, and *Update all* / *System* / *mise*. |
 | Dashboard tab *Updates* | Every source with its status, last check time, errors and warnings; *Check for updates*, the same update actions, and *Bump mise versions…* when upgrades exist past the configured versions. Available while the pill is hidden: `dms ipc call dash open plugin_cachyUpdates`. |
-| Settings | Settings → Plugins → CachyOS Updates: check interval, timeout, terminal command, mise options. |
+| Settings | Settings → Plugins → CachyOS Updates: check interval, timeout, terminal override, mise options. |
 
 ## How checking works
 
@@ -49,7 +51,7 @@ Each source is checked by [`scripts/check.sh`](scripts/check.sh), which reports 
 
 ## Running updates
 
-Update actions open `<terminal command> env bash scripts/run-update.sh <mode>` through
+Update actions open `<terminal> env bash scripts/run-update.sh <mode>` through
 `systemd-run --user --scope`, so the terminal lives in its own cgroup: reloading or restarting
 DMS does not interrupt a transaction. The tools keep their normal output and prompts.
 
@@ -63,11 +65,29 @@ DMS does not interrupt a transaction. The tools keep their normal output and pro
 The script tells the daemon when it starts and ends (`dms ipc call cachyUpdates started|finished`),
 including when the window is closed, and the daemon then checks again.
 
+### Terminal
+
+With the plugin's *Terminal command* setting left empty (the default), the terminal is, in order:
+
+1. DMS's own terminal setting (the one DMS uses for `Terminal=true` applications);
+2. `$TERMINAL`;
+3. the first installed of `xdg-terminal-exec`, ghostty, kitty, foot, alacritty, wezterm,
+   konsole, gnome-terminal, ptyxis, xfce4-terminal, xterm.
+
+A configured terminal that is not installed is skipped (and reported). The plugin adds the
+right "run this command" arguments for known terminals (`-e` for Ghostty, Alacritty, Konsole,
+xterm; nothing for kitty and foot; `start --` for WezTerm; `--` for GNOME Terminal and Ptyxis;
+`-x` for xfce4-terminal and Terminator; `-e` for anything else). The dashboard footer and the
+settings page show which terminal is used and why.
+
+Setting *Terminal command* overrides all of this with a literal prefix, for a terminal the
+table does not know or to add flags, e.g. `kitty --hold` or `ghostty --title=Updates -e`.
+
 ## IPC
 
 ```sh
 dms ipc call cachyUpdates check            # start a check
-dms ipc call cachyUpdates status           # JSON summary
+dms ipc call cachyUpdates status           # JSON summary, including the terminal used
 dms ipc call cachyUpdates update all       # or system, mise, mise-bump
 dms ipc call dash open plugin_cachyUpdates # open the dashboard tab
 ```
@@ -75,7 +95,7 @@ dms ipc call dash open plugin_cachyUpdates # open the dashboard tab
 ## Install
 
 Requirements: DMS ≥ 2.1, `cachy-update`, `pacman-contrib` (checkupdates), `mise`, a terminal
-(Ghostty by default), systemd user session. An AUR helper and Flatpak are optional.
+(see [Terminal](#terminal)), systemd user session. An AUR helper and Flatpak are optional.
 
 ```sh
 git clone <repo> ~/src/dms-plugin-cachyos-update
@@ -117,5 +137,7 @@ dms ipc call plugins reload cachyUpdates     # reload after editing
 journalctl --user -u dms -f | grep -i cachy  # logs
 ```
 
-DMS keeps a plugin's file list from its first load: a new QML or JS file next to existing ones
-needs `dms restart` (see the DMS plugin docs).
+`dms ipc call plugins reload` picks up QML changes, but not changes to `logic/Updates.js`:
+Qt caches `.pragma library` scripts until the shell restarts, so run `dms restart` after
+editing it. Likewise, a new QML or JS file next to existing ones needs `dms restart` (DMS keeps
+a plugin's file list from its first load).

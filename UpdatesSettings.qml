@@ -2,10 +2,13 @@ import QtQuick
 import qs.Common
 import qs.DCommon.Widgets
 import qs.Modules.Plugins
+import qs.Services
 
 PluginSettings {
     id: root
     pluginId: "cachyUpdates"
+
+    readonly property var daemon: PluginService.pluginDaemonInstances[pluginId] || null
 
     StyledText {
         width: parent.width
@@ -80,9 +83,9 @@ PluginSettings {
     StringSetting {
         settingKey: "terminalCommand"
         label: I18n.trFor("cachyUpdates", "Terminal command")
-        description: I18n.trFor("cachyUpdates", "Opens a new terminal window running the command appended to it")
-        placeholder: "ghostty -e"
-        defaultValue: "ghostty -e"
+        description: I18n.trFor("cachyUpdates", "Leave empty to use the DMS terminal setting, then $TERMINAL, then the first installed terminal. Otherwise, a command that opens a terminal running the command appended to it, e.g. \"kitty --hold\".") + (root.daemon ? "\n" + I18n.trFor("cachyUpdates", "Currently: %1").arg(root.daemon.terminalDescription) : "")
+        placeholder: I18n.trFor("cachyUpdates", "Automatic")
+        defaultValue: ""
     }
 
     ToggleSetting {

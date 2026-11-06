@@ -19,7 +19,8 @@ Scope {
     // Settings (see UpdatesSettings.qml)
     property int intervalMinutes: 60
     property int timeoutSeconds: 120
-    property string terminalCommand: "ghostty -e"
+    // Empty: automatic (DMS terminal setting, then $TERMINAL, then an installed terminal)
+    property string terminalCommand: ""
     property bool miseEnabled: true
     property bool miseBumpEnabled: true
 
@@ -43,6 +44,19 @@ Scope {
     readonly property bool updateRunning: Object.keys(runningUpdates).length > 0
 
     readonly property string scriptsDir: decodeURIComponent(Qt.resolvedUrl("scripts").toString().replace(/^file:\/\//, ""))
+    // Terminal used for updates; see U.resolveTerminal.
+    property var installedTerminals: null
+    readonly property string dmsTerminal: SessionData.terminalOverride || ""
+    readonly property string envTerminal: Quickshell.env("TERMINAL") || ""
+    readonly property var terminalCandidates: U.terminalCandidates(dmsTerminal, envTerminal)
+    readonly property var terminal: U.resolveTerminal({
+        custom: terminalCommand,
+        dmsOverride: dmsTerminal,
+        envTerminal: envTerminal,
+        installed: installedTerminals
+    })
+    readonly property string terminalDescription: U.describeTerminal(terminal)
+
     readonly property real intervalMs: Math.max(5, intervalMinutes) * 60 * 1000
     readonly property var updateModes: ["system", "mise", "mise-bump", "all"]
 
@@ -93,9 +107,11 @@ Scope {
     function launch(mode) {
         if (updateModes.indexOf(mode) < 0)
             return false;
-        let term = U.splitArgs(terminalCommand);
-        if (term.length === 0)
-            term = ["ghostty", "-e"];
+        const term = terminal.argv;
+        if (term.length === 0) {
+            ToastService.showError(I18n.trFor("cachyUpdates", "No terminal found"), I18n.trFor("cachyUpdates", "Set a terminal in DMS settings, in $TERMINAL, or in the CachyOS Updates plugin settings."));
+            return false;
+        }
         // "env bash" rather than "bash": Ghostty injects its shell integration into commands
         // that start with a known shell name.
         const argv = ["systemd-run", "--user", "--scope", "--collect", "--quiet"].concat(term, ["env", "bash", scriptsDir + "/run-update.sh", mode]);
@@ -129,6 +145,10 @@ Scope {
             updateRunning: updateRunning,
             lastCheck: lastRoundAt ? new Date(lastRoundAt).toISOString() : null,
             nextCheck: nextCheckAt ? new Date(nextCheckAt).toISOString() : null,
+            terminal: {
+                command: terminal.argv,
+                description: terminalDescription
+            },
             sources: {}
         };
         for (const id of U.SOURCE_IDS) {
@@ -218,7 +238,7 @@ Scope {
     function _loadSettings() {
         intervalMinutes = parseInt(_setting("intervalMinutes", "60")) || 60;
         timeoutSeconds = parseInt(_setting("timeoutSeconds", "120")) || 120;
-        terminalCommand = String(_setting("terminalCommand", "ghostty -e") || "ghostty -e");
+        terminalCommand = String(_setting("terminalCommand", "") || "");
         miseEnabled = _setting("miseEnabled", true) !== false;
         miseBumpEnabled = _setting("miseBumpEnabled", true) !== false;
     }
@@ -248,6 +268,14 @@ Scope {
             checkNow("scheduled");
     }
 
+    function probeTerminals() {
+        if (terminalProbe.running)
+            return;
+        terminalProbe.command = ["sh", "-c", 'for t in "$@"; do command -v "$t" >/dev/null 2>&1 && echo "$t"; done; exit 0', "probe"].concat(terminalCandidates);
+        terminalProbe.running = true;
+    }
+
+    onTerminalCandidatesChanged: probeTerminals()
     onIntervalMinutesChanged: if (lastRoundAt > 0) _schedule(5000)
     onMiseEnabledChanged: if (lastRoundAt > 0) _schedule(5000)
     onMiseBumpEnabledChanged: if (lastRoundAt > 0) _schedule(5000)
@@ -258,6 +286,7 @@ Scope {
         // Show cached results right away; check when they are due, but never sooner than
         // a short delay after startup so login and shell reloads stay light.
         _schedule(neverChecked ? 10 * 1000 : 45 * 1000);
+        probeTerminals();
         console.info("cachyUpdates: daemon started, next check", new Date(nextCheckAt).toLocaleTimeString());
     }
 
@@ -298,6 +327,17 @@ Scope {
         interval: 3000
         repeat: false
         onTriggered: root.checkNow("after-update")
+    }
+
+    Process {
+        id: terminalProbe
+        running: false
+        stdout: StdioCollector {
+            onStreamFinished: {
+                root.installedTerminals = text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+                console.info("cachyUpdates: update terminal:", root.terminalDescription);
+            }
+        }
     }
 
     CheckProcess {

@@ -239,4 +239,13 @@ ColumnLayout {
             onClicked: root.run("mise-bump")
         }
     }
+
+    StyledText {
+        Layout.fillWidth: true
+        visible: root.ready && (!root.compact || root.daemon.terminal.argv.length === 0)
+        text: root.daemon && root.daemon.terminal.argv.length > 0 ? I18n.trFor("cachyUpdates", "Runs in %1").arg(root.daemon.terminalDescription) : (root.daemon ? root.daemon.terminalDescription + " · " + I18n.trFor("cachyUpdates", "set one in DMS settings, $TERMINAL or the plugin settings") : "")
+        wrapMode: Text.Wrap
+        font.pixelSize: Theme.fontSizeSmall
+        color: root.daemon && root.daemon.terminal.argv.length === 0 ? Theme.error : Theme.surfaceVariantText
+    }
 }

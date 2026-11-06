@@ -140,6 +140,33 @@ test("splits terminal commands", () => {
     assert.deepEqual(U.splitArgs("   "), []);
 });
 
+test("resolves the terminal like DMS, with a custom override", () => {
+    const r = opts => U.resolveTerminal(Object.assign({ custom: "", dmsOverride: "", envTerminal: "", installed: null }, opts));
+    assert.deepEqual(r({ envTerminal: "ghostty" }).argv, ["ghostty", "-e"]);
+    assert.equal(r({ envTerminal: "ghostty" }).source, "env");
+    assert.deepEqual(r({ dmsOverride: "foot", envTerminal: "ghostty" }).argv, ["foot"]);
+    assert.equal(r({ dmsOverride: "foot", envTerminal: "ghostty" }).source, "dms");
+    assert.deepEqual(r({ envTerminal: "/usr/bin/wezterm" }).argv, ["/usr/bin/wezterm", "start", "--"]);
+    assert.deepEqual(r({ envTerminal: "kitty --single-instance" }).argv, ["kitty", "--single-instance"]);
+    assert.deepEqual(r({ envTerminal: "myterm" }).argv, ["myterm", "-e"]);
+    assert.deepEqual(r({ custom: "kitty --hold", envTerminal: "ghostty" }).argv, ["kitty", "--hold"]);
+    assert.equal(r({ custom: "kitty --hold" }).source, "custom");
+});
+
+test("skips missing terminals and falls back to installed ones", () => {
+    const r = opts => U.resolveTerminal(Object.assign({ custom: "", dmsOverride: "", envTerminal: "" }, opts));
+    const t = r({ envTerminal: "ghostty", installed: ["foot", "xterm"] });
+    assert.deepEqual(t.argv, ["foot"]);
+    assert.equal(t.source, "detected");
+    assert.equal(t.note, "ghostty not found");
+    assert.equal(U.describeTerminal(t), "foot (first installed terminal); ghostty not found");
+    assert.deepEqual(r({ installed: ["xdg-terminal-exec", "kitty"] }).argv, ["xdg-terminal-exec"]);
+    const none = r({ installed: [] });
+    assert.deepEqual(none.argv, []);
+    assert.equal(U.describeTerminal(none), "No terminal found");
+    assert.deepEqual(U.terminalCandidates("foot", "ghostty -x").slice(0, 3), ["foot", "ghostty", "xdg-terminal-exec"]);
+});
+
 test("formats times", () => {
     const now = new Date(2026, 10, 6, 15, 0).getTime();
     assert.equal(U.formatAgo(0, now), "never");

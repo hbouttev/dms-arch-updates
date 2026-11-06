@@ -366,6 +366,105 @@ function splitArgs(text) {
     return args;
 }
 
+// ---- Terminal selection -----------------------------------------------------------
+
+// Arguments that make each terminal run the command that follows them. Unknown terminals
+// get "-e", which most terminals accept.
+var TERMINAL_EXEC_ARGS = {
+    "ghostty": ["-e"],
+    "kitty": [],
+    "foot": [],
+    "footclient": [],
+    "alacritty": ["-e"],
+    "wezterm": ["start", "--"],
+    "konsole": ["-e"],
+    "gnome-terminal": ["--"],
+    "ptyxis": ["--"],
+    "kgx": ["--"],
+    "xfce4-terminal": ["-x"],
+    "terminator": ["-x"],
+    "tilix": ["-x"],
+    "st": ["-e"],
+    "urxvt": ["-e"],
+    "rio": ["-e"],
+    "xterm": ["-e"],
+    "xdg-terminal-exec": []
+};
+
+// Tried in order when neither DMS nor $TERMINAL names an installed terminal.
+// The order after xdg-terminal-exec matches DMS's own terminal list.
+var TERMINAL_FALLBACKS = ["xdg-terminal-exec", "ghostty", "kitty", "foot", "alacritty", "wezterm", "konsole", "gnome-terminal", "ptyxis", "xfce4-terminal", "xterm"];
+
+var TERMINAL_SOURCE_LABELS = {
+    custom: "custom command",
+    dms: "DMS terminal setting",
+    env: "$TERMINAL",
+    detected: "first installed terminal"
+};
+
+function baseName(path) {
+    var s = String(path || "");
+    return s.substring(s.lastIndexOf("/") + 1);
+}
+
+function terminalExecArgs(program) {
+    var args = TERMINAL_EXEC_ARGS[baseName(program)];
+    return args ? args.slice() : ["-e"];
+}
+
+// Programs worth probing with `command -v`: the fallbacks plus whatever DMS and
+// $TERMINAL name.
+function terminalCandidates(dmsOverride, envTerminal) {
+    var out = [];
+    [splitArgs(dmsOverride)[0], splitArgs(envTerminal)[0]].concat(TERMINAL_FALLBACKS).forEach(function (p) {
+        if (p && out.indexOf(p) < 0)
+            out.push(p);
+    });
+    return out;
+}
+
+// Picks the terminal command prefix. Order: the plugin's custom command, the DMS terminal
+// setting, $TERMINAL, then the first installed fallback. `installed` lists the programs
+// found on PATH, or is null while unknown (then nothing is skipped).
+// Returns {argv, name, source, note}; argv is empty when no terminal was found.
+function resolveTerminal(opts) {
+    var custom = splitArgs(opts.custom);
+    if (custom.length)
+        return { argv: custom, name: baseName(custom[0]), source: "custom", note: "" };
+
+    var installed = opts.installed;
+    var isInstalled = function (p) {
+        return installed === null || installed === undefined || installed.indexOf(p) >= 0;
+    };
+    var skipped = [];
+    var configured = [[opts.dmsOverride, "dms"], [opts.envTerminal, "env"]];
+    for (var i = 0; i < configured.length; i++) {
+        var words = splitArgs(configured[i][0]);
+        if (!words.length)
+            continue;
+        if (!isInstalled(words[0])) {
+            skipped.push(words[0]);
+            continue;
+        }
+        return { argv: words.concat(terminalExecArgs(words[0])), name: baseName(words[0]), source: configured[i][1], note: "" };
+    }
+
+    var note = skipped.length ? skipped.join(", ") + " not found" : "";
+    for (var j = 0; j < TERMINAL_FALLBACKS.length; j++) {
+        var p = TERMINAL_FALLBACKS[j];
+        if (installed && installed.indexOf(p) >= 0)
+            return { argv: [p].concat(terminalExecArgs(p)), name: p, source: "detected", note: note };
+    }
+    return { argv: [], name: "", source: "none", note: note };
+}
+
+function describeTerminal(t) {
+    if (!t || !t.argv.length)
+        return "No terminal found" + (t && t.note ? " (" + t.note + ")" : "");
+    var text = t.name + " (" + (TERMINAL_SOURCE_LABELS[t.source] || t.source) + ")";
+    return t.note ? text + "; " + t.note : text;
+}
+
 function escapeHtml(text) {
     return String(text || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
