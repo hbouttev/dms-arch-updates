@@ -11,7 +11,7 @@ PluginComponent {
 
     property var popoutService: null
 
-    readonly property var daemon: pluginService && pluginService.pluginDaemonInstances ? (pluginService.pluginDaemonInstances[pluginId] || null) : null
+    readonly property var daemon: pluginService?.pluginDaemonInstances?.[pluginId] ?? null
     readonly property int count: daemon ? daemon.totalCount : 0
     readonly property bool incomplete: daemon ? daemon.incomplete : false
     // Only the count decides visibility: checks in progress or failed checks never make

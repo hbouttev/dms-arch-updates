@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 
 const src = readFileSync(fileURLToPath(new URL("../logic/Updates.js", import.meta.url)), "utf8").replace(/^\.pragma library\s*$/m, "");
-const names = [...src.matchAll(/^(?:function|var)\s+([A-Za-z_]\w*)/gm)].map(m => m[1]);
+const names = [...src.matchAll(/^(?:function|const|let|var)\s+([A-Za-z_]\w*)/gm)].map(m => m[1]);
 const U = new Function(`${src}\nreturn { ${names.join(", ")} };`)();
 
 let failed = 0;

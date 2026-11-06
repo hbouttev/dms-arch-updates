@@ -8,7 +8,7 @@ PluginSettings {
     id: root
     pluginId: "cachyUpdates"
 
-    readonly property var daemon: PluginService.pluginDaemonInstances[pluginId] || null
+    readonly property var daemon: PluginService.pluginDaemonInstances?.[pluginId] ?? null
 
     StyledText {
         width: parent.width

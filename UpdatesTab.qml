@@ -11,7 +11,7 @@ DashTabComponent {
     // Injected by the dash host: how many 96 px rows fit on this screen.
     property int rowBudget: DashMetrics.minimumTabRows
 
-    readonly property var daemon: pluginService && pluginService.pluginDaemonInstances ? (pluginService.pluginDaemonInstances[pluginId] || null) : null
+    readonly property var daemon: pluginService?.pluginDaemonInstances?.[pluginId] ?? null
     readonly property real maxHeight: DashMetrics.heightForRows(Math.max(DashMetrics.minimumTabRows, rowBudget))
 
     implicitHeight: Math.max(DashMetrics.tabMinHeight, Math.min(panel.implicitHeight, maxHeight))

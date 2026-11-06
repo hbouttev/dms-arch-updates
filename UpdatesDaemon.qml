@@ -105,7 +105,7 @@ Scope {
     // Opens a terminal running scripts/run-update.sh <mode>, outside DMS's cgroup so that
     // restarting or reloading DMS does not interrupt a transaction.
     function launch(mode) {
-        if (updateModes.indexOf(mode) < 0)
+        if (!updateModes.includes(mode))
             return false;
         const term = terminal.argv;
         if (term.length === 0) {
@@ -168,7 +168,7 @@ Scope {
     // ---- Internals ----------------------------------------------------------------
 
     function _onSourceFinished(id, exitCode, out, err) {
-        if (checkingIds.indexOf(id) < 0)
+        if (!checkingIds.includes(id))
             return;
         const result = U.classifyResult(id, exitCode, out, err, timeoutSeconds);
         if (result.state === "error")

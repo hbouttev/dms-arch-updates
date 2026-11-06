@@ -175,7 +175,7 @@ ColumnLayout {
                 delegate: SourceSection {
                     sourceId: modelData
                     source: root.sources[modelData]
-                    checking: root.checkingIds.indexOf(modelData) >= 0
+                    checking: root.checkingIds.includes(modelData)
                     compact: root.compact
                     now: root.now
                 }
