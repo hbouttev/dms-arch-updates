@@ -98,8 +98,8 @@ Requirements: DMS ≥ 2.1, `cachy-update`, `pacman-contrib` (checkupdates), `mis
 (see [Terminal](#terminal)), systemd user session. An AUR helper and Flatpak are optional.
 
 ```sh
-git clone <repo> ~/src/dms-plugin-cachyos-update
-ln -s ~/src/dms-plugin-cachyos-update ~/.config/dms/plugins/cachyUpdates
+git clone https://github.com/hbouttev/dms-cachyos-updates.git ~/src/dms-cachyos-updates
+ln -s ~/src/dms-cachyos-updates ~/.config/dms/plugins/cachyUpdates
 dms ipc call plugin-scan scan
 dms ipc call plugins enable cachyUpdates
 ```
