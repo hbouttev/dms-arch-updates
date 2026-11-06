@@ -77,8 +77,8 @@ With the plugin's *Terminal command* setting left empty (the default), the termi
 A configured terminal that is not installed is skipped (and reported). The plugin adds the
 right "run this command" arguments for known terminals (`-e` for Ghostty, Alacritty, Konsole,
 xterm; nothing for kitty and foot; `start --` for WezTerm; `--` for GNOME Terminal and Ptyxis;
-`-x` for xfce4-terminal and Terminator; `-e` for anything else). The dashboard footer and the
-settings page show which terminal is used and why.
+`-x` for xfce4-terminal and Terminator; `-e` for anything else). The settings page shows which
+terminal is used and why; the dashboard and popout only mention it when none was found.
 
 Setting *Terminal command* overrides all of this with a literal prefix, for a terminal the
 table does not know or to add flags, e.g. `kitty --hold` or `ghostty --title=Updates -e`.
@@ -133,11 +133,12 @@ tests/run.mjs         tests for logic/Updates.js
 ```sh
 node tests/run.mjs                           # logic tests
 scripts/check.sh aur; echo $?                # one source by hand (0 ok, 3 n/a, else failure)
-dms ipc call plugins reload cachyUpdates     # reload after editing
+dms ipc call plugins reload cachyUpdates     # reload after editing a component (see below)
 journalctl --user -u dms -f | grep -i cachy  # logs
 ```
 
-`dms ipc call plugins reload` picks up QML changes, but not changes to `logic/Updates.js`:
-Qt caches `.pragma library` scripts until the shell restarts, so run `dms restart` after
-editing it. Likewise, a new QML or JS file next to existing ones needs `dms restart` (DMS keeps
-a plugin's file list from its first load).
+`dms ipc call plugins reload` only picks up changes to the component files named in
+`plugin.json`. Qt caches everything else until the shell restarts: the shared views
+(`UpdatesPanel.qml`, `SourceSection.qml`, `UpdateRow.qml`, `CheckProcess.qml`), the
+`.pragma library` script `logic/Updates.js`, and the list of files in the plugin folder. After
+editing those, or adding a file, run `dms restart`.
