@@ -212,3 +212,7 @@ The plugin is ready for translation but ships none yet. Every string it shows go
 
 A translation is a `translations/<locale>.json` file (`fr.json`, `pt_BR.json`…) mapping each
 English string to its translation, as described in DMS's plugin guide.
+
+## License
+
+[MIT](LICENSE)
