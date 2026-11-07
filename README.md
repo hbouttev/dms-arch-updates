@@ -109,9 +109,23 @@ to a bar's widget list in `~/.config/dms/settings.json`).
 
 ### Coexistence with other updaters
 
-The plugin does not touch Cachy-Update's own checker. If `arch-update.timer` or the
-`arch-update-tray` applet are enabled, they keep checking and notifying independently; disable
-them if the plugin replaces them. The plugin never writes Cachy-Update's state files.
+The plugin does not touch Cachy-Update's own checker or tray applet, and never writes
+Cachy-Update's state files. Both are optional: `cachy-update` works without them.
+
+- `arch-update.timer` runs scheduled checks with desktop notifications. If
+  `systemctl --user is-enabled arch-update.timer` says it is enabled,
+  `systemctl --user disable --now arch-update.timer` stops it.
+- The tray applet starts at every login, because the `cachy-update` package installs
+  `/etc/xdg/autostart/arch-update-tray.desktop`. It only shows Cachy-Update's last results, so
+  next to the plugin it is a second, possibly stale, update icon. To turn it off without
+  editing the packaged file (pacman would restore it), add a per-user entry with the same name
+  that marks it hidden, then stop the running copy:
+
+  ```sh
+  mkdir -p ~/.config/autostart
+  printf '[Desktop Entry]\nHidden=true\n' > ~/.config/autostart/arch-update-tray.desktop
+  systemctl --user stop 'app-arch\x2dupdate\x2dtray@autostart.service'
+  ```
 
 ## Development
 
