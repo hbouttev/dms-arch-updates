@@ -88,7 +88,7 @@ Settings → Plugins → Arch Updates → *System update method*:
 The buttons name the command they run (*Run Cachy-Update*, *Run yay -Syu*…). If the chosen tool
 is uninstalled later, updates fall back to *Direct* and the settings page says so.
 
-<img src="assets/settings.png" width="653" alt="The plugin's settings page: system update method (Automatic, Cachy-Update, Direct), check interval, timeout, terminal command and mise options">
+<img src="assets/settings.png" width="624" alt="The plugin's settings page: system update method (Automatic, Cachy-Update, Direct), check interval, timeout, terminal command and mise options">
 
 ### Terminal
 
