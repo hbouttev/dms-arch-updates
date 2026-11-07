@@ -16,7 +16,7 @@ The plugin only checks, displays and launches. It never runs an update on its ow
 
 This is a community plugin, not affiliated with Arch Linux or CachyOS.
 
-![The Updates dashboard tab, with seven repository updates and the update buttons](assets/screenshot.png)
+<img src="assets/popout.png" width="446" alt="The bar pill showing 10 updates, and its popout listing repository, Flatpak and mise updates with the Update all, System and mise buttons">
 
 ## Surfaces
 
@@ -26,6 +26,8 @@ This is a community plugin, not affiliated with Arch Linux or CachyOS.
 | Popout | Sources with updates or problems, a re-check button, and *Update all* / *System* / *mise*. |
 | Dashboard tab *Updates* | Every source with its status, last check time, errors and warnings; *Check for updates*, the same update actions, and *Bump mise versions…* when upgrades exist past the configured versions. Available while the pill is hidden: `dms ipc call dash open plugin_archUpdates`. |
 | Settings | Settings → Plugins → Arch Updates: system update method, check interval, timeout, terminal override, mise options. |
+
+<img src="assets/dashboard.png" width="825" alt="The Updates dashboard tab: every source with its status and last check time, and the Check for updates, Update all, Run Cachy-Update and Upgrade mise tools buttons">
 
 ## How checking works
 
@@ -85,6 +87,8 @@ Settings → Plugins → Arch Updates → *System update method*:
 
 The buttons name the command they run (*Run Cachy-Update*, *Run yay -Syu*…). If the chosen tool
 is uninstalled later, updates fall back to *Direct* and the settings page says so.
+
+<img src="assets/settings.png" width="653" alt="The plugin's settings page: system update method (Automatic, Cachy-Update, Direct), check interval, timeout, terminal command and mise options">
 
 ### Terminal
 
@@ -178,7 +182,7 @@ scripts/check.sh         per-source checks
 scripts/detect.sh        installed update tools, as JSON for the daemon
 scripts/run-update.sh    update runner in the terminal
 tests/run.mjs            tests for logic/Updates.js and the message codes
-assets/screenshot.png    screenshot for the README and the plugin registry
+assets/                 screenshots for the README; popout.png is the plugin registry's
 ```
 
 ```sh
