@@ -16,6 +16,8 @@ The plugin only checks, displays and launches. It never runs an update on its ow
 
 This is a community plugin, not affiliated with Arch Linux or CachyOS.
 
+![The Updates dashboard tab, with seven repository updates and the update buttons](assets/screenshot.png)
+
 ## Surfaces
 
 | Surface | Behaviour |
@@ -175,7 +177,8 @@ scripts/common.sh        arch-update.conf options, AUR helper and Arch-Update de
 scripts/check.sh         per-source checks
 scripts/detect.sh        installed update tools, as JSON for the daemon
 scripts/run-update.sh    update runner in the terminal
-tests/run.mjs            tests for logic/Updates.js
+tests/run.mjs            tests for logic/Updates.js and the message codes
+assets/screenshot.png    screenshot for the README and the plugin registry
 ```
 
 ```sh
