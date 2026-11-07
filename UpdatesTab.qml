@@ -41,5 +41,11 @@ DashTabComponent {
         daemon: root.daemon
         compact: false
         live: root.live
+
+        // Get out of the way of the update terminal.
+        onLaunched: {
+            if (root.dashHost)
+                root.dashHost.dashVisible = false;
+        }
     }
 }

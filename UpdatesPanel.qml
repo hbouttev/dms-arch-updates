@@ -18,7 +18,7 @@ ColumnLayout {
     // False while not on screen; stops animations (the dash keeps its content alive).
     property bool live: true
 
-    // Emitted after an update terminal was launched (the popout closes itself).
+    // Emitted after an update terminal was launched; the popout and the dash close on it.
     signal launched
 
     readonly property bool ready: daemon !== null
