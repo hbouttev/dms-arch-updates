@@ -399,6 +399,50 @@ function describeTerminal(t) {
     return t.note ? `${text}; ${t.note}` : text;
 }
 
+// ---- System update method ---------------------------------------------------------
+
+// Setting values. "arch-update" covers Cachy-Update, CachyOS's fork of the same script.
+const UPDATE_METHODS = ["auto", "arch-update", "direct"];
+
+function archUpdateName(command) {
+    if (command === "cachy-update")
+        return "Cachy-Update";
+    if (command === "arch-update")
+        return "Arch-Update";
+    return "Arch-Update / Cachy-Update";
+}
+
+// Resolves the update-method setting against the tools scripts/detect.sh found:
+// {archUpdate, aurHelper, flatpak}, or null while not detected yet (the update script then
+// resolves the method itself). Returns {method, label, aurHelper, flatpak, note}, where
+// method is what run-update.sh receives and label names the command that will run.
+function resolveUpdateMethod(setting, tools) {
+    const wanted = UPDATE_METHODS.includes(setting) ? setting : "auto";
+    if (!tools)
+        return { method: wanted, label: "", aurHelper: "", flatpak: false, note: "" };
+    const archUpdate = tools.archUpdate || "";
+    if (wanted !== "direct" && archUpdate)
+        return { method: "arch-update", label: archUpdateName(archUpdate), aurHelper: "", flatpak: false, note: "" };
+    const aurHelper = tools.aurHelper || "";
+    return {
+        method: "direct",
+        label: aurHelper ? `${aurHelper} -Syu` : "pacman -Syu",
+        aurHelper,
+        flatpak: !!tools.flatpak,
+        note: wanted === "arch-update" ? `${archUpdateName("")} is not installed, so updates run directly` : ""
+    };
+}
+
+// One line describing what the system update runs, for tooltips and the settings page.
+function describeSystemUpdate(m) {
+    if (!m?.label)
+        return "System update: repositories, AUR and Flatpak";
+    if (m.method === "arch-update")
+        return `${m.label}: repositories, AUR and Flatpak, with Arch news and maintenance steps`;
+    const what = m.aurHelper ? "repositories and AUR" : "repositories";
+    return `${m.label} (${what})` + (m.flatpak ? ", then flatpak update" : "");
+}
+
 function escapeHtml(text) {
     return String(text || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }

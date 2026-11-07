@@ -1,18 +1,29 @@
 #!/usr/bin/env bash
 # Runs updates inside the terminal the plugin opened.
 #
-#   run-update.sh system      Cachy-Update (repositories, AUR, Flatpak, news and maintenance)
-#   run-update.sh mise        mise upgrade --global (stays within configured versions)
-#   run-update.sh mise-bump   mise upgrade --global --bump (moves past configured versions)
-#   run-update.sh all         system, then mise
+#   run-update.sh system [method]   system update (repositories, AUR, Flatpak)
+#   run-update.sh mise              mise upgrade --global (stays within configured versions)
+#   run-update.sh mise-bump         mise upgrade --global --bump (moves past configured versions)
+#   run-update.sh all [method]      system, then mise
+#
+# System update methods:
+#   arch-update  Arch-Update, or Cachy-Update on CachyOS: also shows Arch news and handles
+#                pacnew files, orphans, the package cache and reboot notices
+#   direct       <AUR helper> -Syu (repositories and AUR) or sudo pacman -Syu, then
+#                flatpak update when Flatpak is in use
+#   auto         arch-update when installed, otherwise direct (default)
 #
 # The tools keep their normal output and prompts. The plugin is told when the run starts
 # and ends (through DMS IPC) so it can re-check; if DMS is not running that is skipped.
 
 set -u
 
+# shellcheck source=common.sh
+source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+
 mode="${1:-all}"
-ipc_target="cachyUpdates"
+method="${2:-auto}"
+ipc_target="archUpdates"
 status=0
 
 notify() {
@@ -46,9 +57,43 @@ wait_for_key() {
 	printf '\n'
 }
 
+# Sets system_cmd (argv) and system_label for the chosen method.
+resolve_system() {
+	local au helper
+	au="$(arch_update_command)"
+	if [[ "$method" == "arch-update" && -z "$au" ]]; then
+		echo "Arch-Update / Cachy-Update is not installed; updating directly instead."
+		method="direct"
+	fi
+	if [[ "$method" != "direct" && -n "$au" ]]; then
+		method="arch-update"
+		system_cmd=("$au")
+		[[ "$au" == "cachy-update" ]] && system_label="Cachy-Update" || system_label="Arch-Update"
+		return
+	fi
+	method="direct"
+	if helper="$(aur_helper)"; then
+		system_cmd=("$helper" -Syu)
+		system_label="$helper -Syu"
+	else
+		system_cmd=(sudo pacman -Syu)
+		system_label="pacman -Syu"
+	fi
+}
+
 run_system() {
-	heading "Cachy-Update"
-	cachy-update
+	resolve_system
+	heading "$system_label"
+	"${system_cmd[@]}"
+	local rc=$?
+	if [[ "$method" == "direct" ]] && flatpak_in_use; then
+		heading "flatpak update"
+		flatpak update
+		local flatpak_rc=$?
+		[[ $rc -eq 0 ]] && rc=$flatpak_rc
+		system_label="$system_label, flatpak update"
+	fi
+	return "$rc"
 }
 
 run_mise() {
@@ -68,9 +113,13 @@ notify started "$mode"
 
 case "$mode" in
 	system)
-		# Cachy-Update ends with its own "Press enter to quit" prompt.
 		run_system
 		status=$?
+		# Arch-Update ends with its own "Press enter to quit" prompt.
+		if [[ "$method" == "direct" ]]; then
+			result_line "$system_label" "$status"
+			wait_for_key
+		fi
 		;;
 	mise)
 		run_mise
@@ -90,13 +139,13 @@ case "$mode" in
 		run_mise
 		mise_status=$?
 		heading "Summary"
-		result_line "Cachy-Update" "$system_status"
+		result_line "$system_label" "$system_status"
 		result_line "mise" "$mise_status"
 		status=$((system_status != 0 ? system_status : mise_status))
 		wait_for_key
 		;;
 	*)
-		echo "usage: run-update.sh system|mise|mise-bump|all" >&2
+		echo "usage: run-update.sh system|mise|mise-bump|all [arch-update|direct|auto]" >&2
 		status=64
 		wait_for_key
 		;;

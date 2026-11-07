@@ -30,6 +30,8 @@ ColumnLayout {
     readonly property bool incomplete: daemon ? daemon.incomplete : false
     readonly property bool neverChecked: daemon ? daemon.neverChecked : true
     readonly property var checkingIds: daemon ? daemon.checkingIds : []
+    // Name of the system update command ("Cachy-Update", "yay -Syu", ...), empty if unknown
+    readonly property string systemLabel: daemon ? daemon.updateMethod.label : ""
 
     readonly property var visibleIds: U.SOURCE_IDS.filter(id => {
         if (!compact)
@@ -40,28 +42,28 @@ ColumnLayout {
 
     readonly property string titleText: {
         if (!ready)
-            return I18n.trFor("cachyUpdates", "Updates");
+            return I18n.trFor("archUpdates", "Updates");
         if (total > 0)
-            return total === 1 ? I18n.trFor("cachyUpdates", "1 update available") : I18n.trFor("cachyUpdates", "%1 updates available").arg(total);
+            return total === 1 ? I18n.trFor("archUpdates", "1 update available") : I18n.trFor("archUpdates", "%1 updates available").arg(total);
         if (neverChecked)
-            return checking ? I18n.trFor("cachyUpdates", "Checking for updates…") : I18n.trFor("cachyUpdates", "Not checked yet");
+            return checking ? I18n.trFor("archUpdates", "Checking for updates…") : I18n.trFor("archUpdates", "Not checked yet");
         if (incomplete)
-            return I18n.trFor("cachyUpdates", "No updates found, some checks failed");
-        return I18n.trFor("cachyUpdates", "Everything is up to date");
+            return I18n.trFor("archUpdates", "No updates found, some checks failed");
+        return I18n.trFor("archUpdates", "Everything is up to date");
     }
 
     readonly property string subtitleText: {
         if (!ready)
-            return I18n.trFor("cachyUpdates", "The plugin's background service is not running. Re-enable the plugin in Settings → Plugins.");
+            return I18n.trFor("archUpdates", "The plugin's background service is not running. Re-enable the plugin in Settings → Plugins.");
         const parts = [];
         if (checking)
-            parts.push(I18n.trFor("cachyUpdates", "Checking…"));
+            parts.push(I18n.trFor("archUpdates", "Checking…"));
         else if (daemon.lastRoundAt > 0)
-            parts.push(I18n.trFor("cachyUpdates", "Checked %1").arg(U.formatAgo(daemon.lastRoundAt, now)));
+            parts.push(I18n.trFor("archUpdates", "Checked %1").arg(U.formatAgo(daemon.lastRoundAt, now)));
         if (incomplete && total > 0)
-            parts.push(I18n.trFor("cachyUpdates", "some checks failed"));
+            parts.push(I18n.trFor("archUpdates", "some checks failed"));
         if (!compact && !checking && daemon.nextCheckAt > now)
-            parts.push(I18n.trFor("cachyUpdates", "next at %1").arg(U.formatTime(daemon.nextCheckAt, now)));
+            parts.push(I18n.trFor("archUpdates", "next at %1").arg(U.formatTime(daemon.nextCheckAt, now)));
         return parts.join(" · ");
     }
 
@@ -114,7 +116,7 @@ ColumnLayout {
             enabled: !root.checking
             iconName: "refresh"
             buttonSize: Theme.buttonHeightXS
-            tooltipText: I18n.trFor("cachyUpdates", "Check for updates")
+            tooltipText: I18n.trFor("archUpdates", "Check for updates")
             Accessible.name: tooltipText
             onClicked: root.daemon.checkNow("manual")
         }
@@ -141,7 +143,7 @@ ColumnLayout {
 
             StyledText {
                 Layout.fillWidth: true
-                text: I18n.trFor("cachyUpdates", "An update is running in a terminal. Results refresh when it ends.")
+                text: I18n.trFor("archUpdates", "An update is running in a terminal. Results refresh when it ends.")
                 wrapMode: Text.Wrap
                 font.pixelSize: Theme.fontSizeSmall
                 color: Theme.onPrimaryContainer
@@ -194,7 +196,7 @@ ColumnLayout {
             visible: !root.compact
             enabled: !root.checking
             busy: root.checking
-            text: root.checking ? I18n.trFor("cachyUpdates", "Checking…") : I18n.trFor("cachyUpdates", "Check for updates")
+            text: root.checking ? I18n.trFor("archUpdates", "Checking…") : I18n.trFor("archUpdates", "Check for updates")
             iconName: "refresh"
             backgroundColor: Theme.surfaceContainerHighest
             textColor: Theme.surfaceText
@@ -203,39 +205,39 @@ ColumnLayout {
 
         DButton {
             visible: !root.compact || (root.systemCount > 0 && root.miseCount > 0)
-            text: I18n.trFor("cachyUpdates", "Update all")
+            text: I18n.trFor("archUpdates", "Update all")
             iconName: "system_update_alt"
-            tooltipText: I18n.trFor("cachyUpdates", "Cachy-Update, then mise upgrade --global, in one terminal")
+            tooltipText: I18n.trFor("archUpdates", "%1, then mise upgrade --global, in one terminal").arg(root.ready ? root.daemon.systemUpdateDescription : "")
             onClicked: root.run("all")
         }
 
         DButton {
             visible: !root.compact || root.systemCount > 0 || root.miseCount === 0
-            text: root.compact ? I18n.trFor("cachyUpdates", "System") : I18n.trFor("cachyUpdates", "Run Cachy-Update")
+            text: root.compact ? I18n.trFor("archUpdates", "System") : (root.systemLabel ? I18n.trFor("archUpdates", "Run %1").arg(root.systemLabel) : I18n.trFor("archUpdates", "Update system"))
             iconName: "terminal"
             backgroundColor: root.compact && root.miseCount === 0 ? Theme.primary : Theme.secondaryContainer
             textColor: root.compact && root.miseCount === 0 ? Theme.onPrimary : Theme.onSecondaryContainer
-            tooltipText: I18n.trFor("cachyUpdates", "Repositories, AUR and Flatpak, with Arch news and maintenance steps")
+            tooltipText: root.ready ? root.daemon.systemUpdateDescription : ""
             onClicked: root.run("system")
         }
 
         DButton {
             visible: !root.compact || root.miseCount > 0
-            text: root.compact ? I18n.trFor("cachyUpdates", "mise") : I18n.trFor("cachyUpdates", "Upgrade mise tools")
+            text: root.compact ? I18n.trFor("archUpdates", "mise") : I18n.trFor("archUpdates", "Upgrade mise tools")
             iconName: "construction"
             backgroundColor: root.compact && root.systemCount === 0 ? Theme.primary : Theme.secondaryContainer
             textColor: root.compact && root.systemCount === 0 ? Theme.onPrimary : Theme.onSecondaryContainer
-            tooltipText: I18n.trFor("cachyUpdates", "mise upgrade --global, within the versions in your config")
+            tooltipText: I18n.trFor("archUpdates", "mise upgrade --global, within the versions in your config")
             onClicked: root.run("mise")
         }
 
         DButton {
             visible: !root.compact && root.bumpCount > 0
-            text: I18n.trFor("cachyUpdates", "Bump mise versions…")
+            text: I18n.trFor("archUpdates", "Bump mise versions…")
             iconName: "upgrade"
             backgroundColor: Theme.surfaceContainerHighest
             textColor: Theme.surfaceText
-            tooltipText: I18n.trFor("cachyUpdates", "mise upgrade --global --bump --interactive: pick tools to move past their configured versions (rewrites config.toml)")
+            tooltipText: I18n.trFor("archUpdates", "mise upgrade --global --bump --interactive: pick tools to move past their configured versions (rewrites config.toml)")
             onClicked: root.run("mise-bump")
         }
     }
@@ -244,7 +246,7 @@ ColumnLayout {
     StyledText {
         Layout.fillWidth: true
         visible: root.ready && root.daemon.terminal.argv.length === 0
-        text: visible ? `${root.daemon.terminalDescription} · ${I18n.trFor("cachyUpdates", "set one in DMS settings, $TERMINAL or the plugin settings")}` : ""
+        text: visible ? `${root.daemon.terminalDescription} · ${I18n.trFor("archUpdates", "set one in DMS settings, $TERMINAL or the plugin settings")}` : ""
         wrapMode: Text.Wrap
         font.pixelSize: Theme.fontSizeSmall
         color: Theme.error

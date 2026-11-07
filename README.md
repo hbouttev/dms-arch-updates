@@ -1,11 +1,12 @@
-# CachyOS Updates for DMS
+# Arch Updates for DMS
 
-A [Dux Shell (DMS)](https://duxlabs.dev/docs/dms/) plugin that shows available updates for
-CachyOS repositories, the AUR, Flatpak and [mise](https://mise.jdx.dev) tools, and runs them in
-a terminal:
+A [Dux Shell (DMS)](https://duxlabs.dev/docs/dms/) plugin for Arch Linux and Arch-based systems
+such as CachyOS. It shows available updates from the repositories, the AUR, Flatpak and
+[mise](https://mise.jdx.dev), and runs them in a terminal:
 
-- system updates go through **Cachy-Update** (`cachy-update`), keeping its Arch news, pacnew,
-  orphan, cache and reboot steps;
+- system updates go through **Arch-Update** (or **Cachy-Update**, its CachyOS fork) when it is
+  installed, keeping its Arch news, pacnew, orphan, cache and reboot steps; otherwise, or if you
+  prefer, directly through your AUR helper or pacman (see [System update method](#system-update-method));
 - mise tools go through **`mise upgrade --global`**, which stays within the versions requested
   in `~/.config/mise/config.toml`.
 
@@ -13,14 +14,16 @@ Updates open in your terminal, chosen the same way DMS chooses it (see [Terminal
 
 The plugin only checks, displays and launches. It never runs an update on its own.
 
+This is a community plugin, not affiliated with Arch Linux or CachyOS.
+
 ## Surfaces
 
 | Surface | Behaviour |
 | --- | --- |
 | Bar pill | Icon and update count. Hidden, taking no space, when there is nothing to update. Background checks never make it appear or flash. Click: popout. Right click: dashboard tab. The icon turns to the warning color if some check failed. |
 | Popout | Sources with updates or problems, a re-check button, and *Update all* / *System* / *mise*. |
-| Dashboard tab *Updates* | Every source with its status, last check time, errors and warnings; *Check for updates*, the same update actions, and *Bump mise versions…* when upgrades exist past the configured versions. Available while the pill is hidden: `dms ipc call dash open plugin_cachyUpdates`. |
-| Settings | Settings → Plugins → CachyOS Updates: check interval, timeout, terminal override, mise options. |
+| Dashboard tab *Updates* | Every source with its status, last check time, errors and warnings; *Check for updates*, the same update actions, and *Bump mise versions…* when upgrades exist past the configured versions. Available while the pill is hidden: `dms ipc call dash open plugin_archUpdates`. |
+| Settings | Settings → Plugins → Arch Updates: system update method, check interval, timeout, terminal override, mise options. |
 
 ## How checking works
 
@@ -29,14 +32,17 @@ screens, and it keeps running while no view is open. The bar pills, popout and d
 only read it.
 
 Each source is checked by [`scripts/check.sh`](scripts/check.sh), which reports success,
-"not applicable" or failure explicitly:
+"not applicable" or failure explicitly. Checks are the same whichever update method is used:
 
 | Source | Command | Follows |
 | --- | --- | --- |
-| Repositories | `checkupdates`, with a private sync database in `$XDG_RUNTIME_DIR/dms-cachy-updates/` | pacman's `IgnorePkg` |
-| AUR | `<helper> -Qua` | `NoAUR` and `AURHelper` in `~/.config/arch-update/arch-update.conf`, otherwise paru, yay, then pikaur (as Cachy-Update) |
+| Repositories | `checkupdates`, with a private sync database in `$XDG_RUNTIME_DIR/dms-arch-updates/` | pacman's `IgnorePkg` |
+| AUR | `<helper> -Qua` | `NoAUR` and `AURHelper` in `~/.config/arch-update/arch-update.conf`, otherwise paru, yay, then pikaur (as Arch-Update) |
 | Flatpak | `flatpak remote-ls --updates`, for the user and system installations that have something installed | `NoFlatpak`, `flatpak mask` patterns |
 | mise | `mise outdated --global --json` (and `--bump` for the dashboard-only list) | versions requested in the global config |
+
+`arch-update.conf` is optional: without it the defaults above apply, with or without Arch-Update
+installed.
 
 - All sources run in parallel, each under `timeout`, and results are applied together when the
   round ends. A second check never starts while one runs.
@@ -51,19 +57,32 @@ Each source is checked by [`scripts/check.sh`](scripts/check.sh), which reports 
 
 ## Running updates
 
-Update actions open `<terminal> env bash scripts/run-update.sh <mode>` through
+Update actions open `<terminal> env bash scripts/run-update.sh <mode> [method]` through
 `systemd-run --user --scope`, so the terminal lives in its own cgroup: reloading or restarting
 DMS does not interrupt a transaction. The tools keep their normal output and prompts.
 
 | Mode | Runs |
 | --- | --- |
-| `system` | `cachy-update` |
+| `system` | the system update (see below) |
 | `mise` | `mise upgrade --global` |
-| `all` | `cachy-update`, then `mise upgrade --global` |
+| `all` | the system update, then `mise upgrade --global` |
 | `mise-bump` | `mise upgrade --global --bump --interactive` (choose tools; rewrites their requested versions) |
 
-The script tells the daemon when it starts and ends (`dms ipc call cachyUpdates started|finished`),
+The script tells the daemon when it starts and ends (`dms ipc call archUpdates started|finished`),
 including when the window is closed, and the daemon then checks again.
+
+### System update method
+
+Settings → Plugins → Arch Updates → *System update method*:
+
+| Method | Runs |
+| --- | --- |
+| **Automatic** (default) | Arch-Update / Cachy-Update when installed, otherwise *Direct* |
+| **Arch-Update / Cachy-Update** | `cachy-update` if installed, otherwise `arch-update`. Besides repositories, AUR and Flatpak, it shows Arch news and handles pacnew files, orphan packages, the package cache and reboot notices. Greyed out on the settings page when neither is installed. |
+| **Direct** | `<helper> -Syu` with paru, yay or pikaur (repositories, then AUR, in one run), or `sudo pacman -Syu` when there is no helper or `NoAUR` is set; then `flatpak update` when Flatpak is in use. No news or maintenance steps. |
+
+The buttons name the command they run (*Run Cachy-Update*, *Run yay -Syu*…). If the chosen tool
+is uninstalled later, updates fall back to *Direct* and the settings page says so.
 
 ### Terminal
 
@@ -83,43 +102,55 @@ terminal is used and why; the dashboard and popout only mention it when none was
 Setting *Terminal command* overrides all of this with a literal prefix, for a terminal the
 table does not know or to add flags, e.g. `kitty --hold` or `ghostty --title=Updates -e`.
 
+## Why mise, and only mise
+
+Besides the system's own sources, the plugin follows exactly one tool manager, on purpose.
+It started as the plugin for my own development machine, where [mise](https://mise.jdx.dev)
+already gathers what would otherwise be separate update sources: language runtimes and CLI tools
+from npm, cargo, pipx, GitHub releases and more, each pinned or tracked in one config, with
+per-directory development environments on top. Following mise covers all of them through a single,
+well-proven tool, instead of adding one source per ecosystem to the plugin.
+
+mise checks can be turned off in the settings; the system part works the same without mise.
+
 ## IPC
 
 ```sh
-dms ipc call cachyUpdates check            # start a check
-dms ipc call cachyUpdates status           # JSON summary, including the terminal used
-dms ipc call cachyUpdates update all       # or system, mise, mise-bump
-dms ipc call dash open plugin_cachyUpdates # open the dashboard tab
+dms ipc call archUpdates check            # start a check
+dms ipc call archUpdates status           # JSON summary, including the update method and terminal
+dms ipc call archUpdates update all       # or system, mise, mise-bump
+dms ipc call dash open plugin_archUpdates # open the dashboard tab
 ```
 
 ## Install
 
-Requirements: DMS ≥ 2.1, `cachy-update`, `pacman-contrib` (checkupdates), `mise`, a terminal
-(see [Terminal](#terminal)), systemd user session. An AUR helper and Flatpak are optional.
+Requirements: DMS ≥ 2.1, `pacman-contrib` (checkupdates), a terminal (see [Terminal](#terminal)),
+systemd user session. Optional: Arch-Update (`arch-update` from the AUR) or Cachy-Update
+(`cachy-update` on CachyOS), an AUR helper (paru, yay or pikaur), Flatpak, mise.
 
 ```sh
-git clone https://github.com/hbouttev/dms-cachyos-updates.git ~/src/dms-cachyos-updates
-ln -s ~/src/dms-cachyos-updates ~/.config/dms/plugins/cachyUpdates
+git clone https://github.com/hbouttev/dms-arch-updates.git ~/src/dms-arch-updates
+ln -s ~/src/dms-arch-updates ~/.config/dms/plugins/archUpdates
 dms ipc call plugin-scan scan
-dms ipc call plugins enable cachyUpdates
+dms ipc call plugins enable archUpdates
 ```
 
-Then add *CachyOS Updates* to a bar in Settings → Bar (or add `{"id": "cachyUpdates", "enabled": true}`
+Then add *Arch Updates* to a bar in Settings → Bar (or add `{"id": "archUpdates", "enabled": true}`
 to a bar's widget list in `~/.config/dms/settings.json`).
 
 ### Coexistence with other updaters
 
-The plugin does not touch Cachy-Update's own checker or tray applet, and never writes
-Cachy-Update's state files. Both are optional: `cachy-update` works without them.
+The plugin does not touch Arch-Update's own checker or tray applet, and never writes its state
+files. Both are optional: `arch-update` / `cachy-update` work without them.
 
 - `arch-update.timer` runs scheduled checks with desktop notifications. If
   `systemctl --user is-enabled arch-update.timer` says it is enabled,
   `systemctl --user disable --now arch-update.timer` stops it.
-- The tray applet starts at every login, because the `cachy-update` package installs
-  `/etc/xdg/autostart/arch-update-tray.desktop`. It only shows Cachy-Update's last results, so
-  next to the plugin it is a second, possibly stale, update icon. To turn it off without
-  editing the packaged file (pacman would restore it), add a per-user entry with the same name
-  that marks it hidden, then stop the running copy:
+- The tray applet may start at every login: the `cachy-update` package installs
+  `/etc/xdg/autostart/arch-update-tray.desktop` for all users, and `arch-update --tray --enable`
+  creates a per-user entry. It only shows Arch-Update's last results, so next to the plugin it is a
+  second, possibly stale, update icon. To turn it off without editing a packaged file (pacman
+  would restore it), make the per-user entry one that marks it hidden, then stop the running copy:
 
   ```sh
   mkdir -p ~/.config/autostart
@@ -130,29 +161,32 @@ Cachy-Update's state files. Both are optional: `cachy-update` works without them
 ## Development
 
 ```text
-plugin.json           manifest (composite: daemon + bar widget + dash tab)
-UpdatesDaemon.qml     scheduling, checks, state, persistence, IPC, launching
-UpdatesWidget.qml     bar pill and popout
-UpdatesTab.qml        dashboard tab
-UpdatesPanel.qml      the view shared by the popout (compact) and the tab
-SourceSection.qml     one source card; UpdateRow.qml: one update line
-CheckProcess.qml      Process wrapper that reports exit code, stdout and stderr together
-UpdatesSettings.qml   settings page
-logic/Updates.js      parsing, state merging, formatting (pure functions)
-scripts/check.sh      per-source checks
-scripts/run-update.sh update runner in the terminal
-tests/run.mjs         tests for logic/Updates.js
+plugin.json              manifest (composite: daemon + bar widget + dash tab)
+UpdatesDaemon.qml        scheduling, checks, state, persistence, IPC, launching
+UpdatesWidget.qml        bar pill and popout
+UpdatesTab.qml           dashboard tab
+UpdatesPanel.qml         the view shared by the popout (compact) and the tab
+SourceSection.qml        one source card; UpdateRow.qml: one update line
+CheckProcess.qml         Process wrapper that reports exit code, stdout and stderr together
+UpdatesSettings.qml      settings page; UpdateMethodSetting.qml: the update method choice
+logic/Updates.js         parsing, state merging, terminal and update method choice (pure functions)
+scripts/common.sh        arch-update.conf options, AUR helper and Arch-Update detection
+scripts/check.sh         per-source checks
+scripts/detect.sh        installed update tools, as JSON for the daemon
+scripts/run-update.sh    update runner in the terminal
+tests/run.mjs            tests for logic/Updates.js
 ```
 
 ```sh
-node tests/run.mjs                           # logic tests
-scripts/check.sh aur; echo $?                # one source by hand (0 ok, 3 n/a, else failure)
-dms ipc call plugins reload cachyUpdates     # reload after editing a component (see below)
-journalctl --user -u dms -f | grep -i cachy  # logs
+node tests/run.mjs                            # logic tests
+scripts/check.sh aur; echo $?                 # one source by hand (0 ok, 3 n/a, else failure)
+scripts/detect.sh                             # update tools found
+dms ipc call plugins reload archUpdates       # reload after editing a component (see below)
+journalctl --user -u dms -f | grep archUpdates  # logs
 ```
 
 `dms ipc call plugins reload` only picks up changes to the component files named in
 `plugin.json`. Qt caches everything else until the shell restarts: the shared views
-(`UpdatesPanel.qml`, `SourceSection.qml`, `UpdateRow.qml`, `CheckProcess.qml`), the
-`.pragma library` script `logic/Updates.js`, and the list of files in the plugin folder. After
-editing those, or adding a file, run `dms restart`.
+(`UpdatesPanel.qml`, `SourceSection.qml`, `UpdateRow.qml`, `CheckProcess.qml`,
+`UpdateMethodSetting.qml`), the `.pragma library` script `logic/Updates.js`, and the list of
+files in the plugin folder. After editing those, or adding a file, run `dms restart`.

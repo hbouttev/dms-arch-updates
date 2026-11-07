@@ -25,16 +25,16 @@ StyledRect {
 
     readonly property string statusText: {
         if (checking)
-            return I18n.trFor("cachyUpdates", "Checking…");
+            return I18n.trFor("archUpdates", "Checking…");
         switch (source.state) {
         case "unknown":
-            return I18n.trFor("cachyUpdates", "Not checked yet");
+            return I18n.trFor("archUpdates", "Not checked yet");
         case "disabled":
-            return I18n.trFor("cachyUpdates", "Not used");
+            return I18n.trFor("archUpdates", "Not used");
         case "error":
-            return stale ? I18n.trFor("cachyUpdates", "Check failed · last success %1").arg(U.formatTime(source.checkedAt, now)) : I18n.trFor("cachyUpdates", "Check failed");
+            return stale ? I18n.trFor("archUpdates", "Check failed · last success %1").arg(U.formatTime(source.checkedAt, now)) : I18n.trFor("archUpdates", "Check failed");
         default:
-            return (count > 0 ? "" : I18n.trFor("cachyUpdates", "Up to date") + " · ") + U.formatTime(source.checkedAt, now);
+            return (count > 0 ? "" : I18n.trFor("archUpdates", "Up to date") + " · ") + U.formatTime(source.checkedAt, now);
         }
     }
 
@@ -176,7 +176,7 @@ StyledRect {
 
             StyledText {
                 width: parent.width
-                text: I18n.trFor("cachyUpdates", "Beyond configured versions (not counted)")
+                text: I18n.trFor("archUpdates", "Beyond configured versions (not counted)")
                 font.pixelSize: Theme.fontSizeSmall
                 font.weight: Theme.fontWeightMedium
                 color: Theme.surfaceVariantText

@@ -12,7 +12,7 @@ import "logic/Updates.js" as U
 Scope {
     id: root
 
-    property string pluginId: "cachyUpdates"
+    property string pluginId: "archUpdates"
     property var pluginService: null
     property var popoutService: null
 
@@ -23,6 +23,8 @@ Scope {
     property string terminalCommand: ""
     property bool miseEnabled: true
     property bool miseBumpEnabled: true
+    // "auto", "arch-update" (Arch-Update or Cachy-Update) or "direct" (AUR helper or pacman)
+    property string updateMethodSetting: "auto"
 
     // State
     property var sources: U.emptySources()
@@ -57,6 +59,11 @@ Scope {
     })
     readonly property string terminalDescription: U.describeTerminal(terminal)
 
+    // Update tools found by scripts/detect.sh, null until detected; see U.resolveUpdateMethod.
+    property var updateTools: null
+    readonly property var updateMethod: U.resolveUpdateMethod(updateMethodSetting, updateTools)
+    readonly property string systemUpdateDescription: U.describeSystemUpdate(updateMethod)
+
     readonly property real intervalMs: Math.max(5, intervalMinutes) * 60 * 1000
     readonly property var updateModes: ["system", "mise", "mise-bump", "all"]
 
@@ -87,7 +94,7 @@ Scope {
             ids.push(id);
         }
         checkingIds = ids;
-        console.info("cachyUpdates: checking", ids.join(", "), "(" + (reason || "manual") + ")");
+        console.info("archUpdates: checking", ids.join(", "), "(" + (reason || "manual") + ")");
         for (const id of ids) {
             const argv = ["timeout", "-k", "10", String(timeoutSeconds), "bash", scriptsDir + "/check.sh", id];
             if (id === "mise" && miseBumpEnabled)
@@ -109,13 +116,16 @@ Scope {
             return false;
         const term = terminal.argv;
         if (term.length === 0) {
-            ToastService.showError(I18n.trFor("cachyUpdates", "No terminal found"), I18n.trFor("cachyUpdates", "Set a terminal in DMS settings, in $TERMINAL, or in the CachyOS Updates plugin settings."));
+            ToastService.showError(I18n.trFor("archUpdates", "No terminal found"), I18n.trFor("archUpdates", "Set a terminal in DMS settings, in $TERMINAL, or in the Arch Updates plugin settings."));
             return false;
         }
         // "env bash" rather than "bash": Ghostty injects its shell integration into commands
         // that start with a known shell name.
-        const argv = ["systemd-run", "--user", "--scope", "--collect", "--quiet"].concat(term, ["env", "bash", scriptsDir + "/run-update.sh", mode]);
-        console.info("cachyUpdates: launching", JSON.stringify(argv));
+        const script = ["env", "bash", scriptsDir + "/run-update.sh", mode];
+        if (mode === "system" || mode === "all")
+            script.push(updateMethod.method);
+        const argv = ["systemd-run", "--user", "--scope", "--collect", "--quiet"].concat(term, script);
+        console.info("archUpdates: launching", JSON.stringify(argv));
         Quickshell.execDetached(argv);
         _setRunning(mode, true);
         return true;
@@ -149,6 +159,13 @@ Scope {
                 command: terminal.argv,
                 description: terminalDescription
             },
+            systemUpdate: {
+                setting: updateMethodSetting,
+                method: updateMethod.method,
+                description: systemUpdateDescription,
+                note: updateMethod.note || undefined,
+                tools: updateTools
+            },
             sources: {}
         };
         for (const id of U.SOURCE_IDS) {
@@ -172,7 +189,7 @@ Scope {
             return;
         const result = U.classifyResult(id, exitCode, out, err, timeoutSeconds);
         if (result.state === "error")
-            console.warn("cachyUpdates:", id, "check failed:", result.error);
+            console.warn("archUpdates:", id, "check failed:", result.error);
         _pending[id] = result;
         checkingIds = checkingIds.filter(x => x !== id);
         if (!checking)
@@ -241,6 +258,7 @@ Scope {
         terminalCommand = String(_setting("terminalCommand", "") || "");
         miseEnabled = _setting("miseEnabled", true) !== false;
         miseBumpEnabled = _setting("miseBumpEnabled", true) !== false;
+        updateMethodSetting = String(_setting("updateMethod", "auto") || "auto");
     }
 
     function _schedule(minDelayMs) {
@@ -275,6 +293,12 @@ Scope {
         terminalProbe.running = true;
     }
 
+    // Installed tools can change with any update, and the settings page asks again when shown.
+    function detectTools() {
+        if (!toolProbe.running)
+            toolProbe.running = true;
+    }
+
     onTerminalCandidatesChanged: probeTerminals()
     onIntervalMinutesChanged: if (lastRoundAt > 0) _schedule(5000)
     onMiseEnabledChanged: if (lastRoundAt > 0) _schedule(5000)
@@ -287,7 +311,8 @@ Scope {
         // a short delay after startup so login and shell reloads stay light.
         _schedule(neverChecked ? 10 * 1000 : 45 * 1000);
         probeTerminals();
-        console.info("cachyUpdates: daemon started, next check", new Date(nextCheckAt).toLocaleTimeString());
+        detectTools();
+        console.info("archUpdates: daemon started, next check", new Date(nextCheckAt).toLocaleTimeString());
     }
 
     Connections {
@@ -335,7 +360,23 @@ Scope {
         stdout: StdioCollector {
             onStreamFinished: {
                 root.installedTerminals = text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
-                console.info("cachyUpdates: update terminal:", root.terminalDescription);
+                console.info("archUpdates: update terminal:", root.terminalDescription);
+            }
+        }
+    }
+
+    Process {
+        id: toolProbe
+        running: false
+        command: ["bash", root.scriptsDir + "/detect.sh"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    root.updateTools = JSON.parse(text);
+                    console.info("archUpdates: system update:", root.systemUpdateDescription);
+                } catch (e) {
+                    console.warn("archUpdates: could not detect update tools:", e.message);
+                }
             }
         }
     }
@@ -360,9 +401,9 @@ Scope {
         onFinished: (exitCode, out, err) => root._onSourceFinished("mise", exitCode, out, err)
     }
 
-    // dms ipc call cachyUpdates <function> [args]
+    // dms ipc call archUpdates <function> [args]
     IpcHandler {
-        target: "cachyUpdates"
+        target: "archUpdates"
 
         function check(): string {
             return root.checkNow("ipc") ? "checking" : "a check is already running";
@@ -384,8 +425,9 @@ Scope {
 
         function finished(mode: string, exitCode: string): string {
             root._setRunning(mode, false);
-            console.info("cachyUpdates: update", mode, "finished with code", exitCode);
+            console.info("archUpdates: update", mode, "finished with code", exitCode);
             recheckTimer.restart();
+            root.detectTools();
             return "ok";
         }
     }

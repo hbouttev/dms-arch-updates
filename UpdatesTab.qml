@@ -3,7 +3,7 @@ import qs.Common
 import qs.Modules.Plugins
 import qs.Modules.DDash
 
-// Dashboard tab (dms ipc call dash open plugin_cachyUpdates). Always available, also
+// Dashboard tab (dms ipc call dash open plugin_archUpdates). Always available, also
 // while the bar pill is hidden. Created only while shown; the daemon keeps the state.
 DashTabComponent {
     id: root
@@ -18,7 +18,7 @@ DashTabComponent {
 
     menuActions: [
         {
-            label: I18n.trFor("cachyUpdates", "Check for updates"),
+            label: I18n.trFor("archUpdates", "Check for updates"),
             iconName: "refresh",
             enabled: root.daemon !== null && !root.daemon.checking,
             action: () => root.daemon.checkNow("manual")

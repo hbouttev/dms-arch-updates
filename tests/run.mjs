@@ -167,6 +167,30 @@ test("skips missing terminals and falls back to installed ones", () => {
     assert.deepEqual(U.terminalCandidates("foot", "ghostty -x").slice(0, 3), ["foot", "ghostty", "xdg-terminal-exec"]);
 });
 
+test("resolves the system update method", () => {
+    const cachy = { archUpdate: "cachy-update", aurHelper: "yay", flatpak: false };
+    const arch = { archUpdate: "arch-update", aurHelper: "paru", flatpak: true };
+    const bare = { archUpdate: "", aurHelper: "", flatpak: false };
+    assert.deepEqual([U.resolveUpdateMethod("auto", cachy).method, U.resolveUpdateMethod("auto", cachy).label], ["arch-update", "Cachy-Update"]);
+    assert.equal(U.resolveUpdateMethod("arch-update", arch).label, "Arch-Update");
+    assert.equal(U.resolveUpdateMethod("direct", cachy).label, "yay -Syu");
+    assert.equal(U.resolveUpdateMethod("auto", { archUpdate: "", aurHelper: "paru", flatpak: true }).label, "paru -Syu");
+    const missing = U.resolveUpdateMethod("arch-update", bare);
+    assert.deepEqual([missing.method, missing.label], ["direct", "pacman -Syu"]);
+    assert.equal(missing.note, "Arch-Update / Cachy-Update is not installed, so updates run directly");
+    assert.equal(U.resolveUpdateMethod("auto", bare).note, "");
+    assert.equal(U.resolveUpdateMethod("bogus", cachy).method, "arch-update");
+    assert.deepEqual(U.resolveUpdateMethod("direct", null), { method: "direct", label: "", aurHelper: "", flatpak: false, note: "" });
+});
+
+test("describes the system update", () => {
+    const d = (s, t) => U.describeSystemUpdate(U.resolveUpdateMethod(s, t));
+    assert.equal(d("auto", { archUpdate: "arch-update" }), "Arch-Update: repositories, AUR and Flatpak, with Arch news and maintenance steps");
+    assert.equal(d("direct", { archUpdate: "arch-update", aurHelper: "paru", flatpak: true }), "paru -Syu (repositories and AUR), then flatpak update");
+    assert.equal(d("direct", { aurHelper: "" }), "pacman -Syu (repositories)");
+    assert.equal(d("auto", null), "System update: repositories, AUR and Flatpak");
+});
+
 test("formats times", () => {
     const now = new Date(2026, 10, 6, 15, 0).getTime();
     assert.equal(U.formatAgo(0, now), "never");

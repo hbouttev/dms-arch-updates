@@ -2,6 +2,7 @@
 # Checks one update source without changing the system.
 #
 #   check.sh repo|aur|flatpak     system sources, following arch-update.conf (NoAUR, NoFlatpak, AURHelper)
+#                                 like Arch-Update / Cachy-Update
 #   check.sh mise [--bump]        tools from the global mise config
 #
 # Exit status protocol (read by UpdatesDaemon.qml / logic/Updates.js):
@@ -21,9 +22,10 @@ set -u
 source_id="${1:-}"
 shift || true
 
-name="arch-update"
-conf="${XDG_CONFIG_HOME:-$HOME/.config}/${name}/${name}.conf"
-work_dir="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/dms-cachy-updates"
+# shellcheck source=common.sh
+source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+
+work_dir="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/dms-arch-updates"
 mkdir -p "$work_dir" || exit 1
 err_file="$(mktemp "$work_dir/stderr.XXXXXX")" || exit 1
 trap 'rm -f "$err_file"' EXIT
@@ -44,21 +46,11 @@ fail() {
 	exit 1
 }
 
-# Same matching rules as Cachy-Update's config.sh.
-conf_flag() {
-	[[ -f "$conf" ]] && grep -Eq "^[[:space:]]*$1[[:space:]]*$" "$conf"
-}
-
-conf_value() {
-	[[ -f "$conf" ]] || return 0
-	grep -E "^[[:space:]]*$1[[:space:]]*=[[:space:]]*$2[[:space:]]*$" "$conf" | tail -n 1 | cut -d '=' -f 2- | tr -d '[:space:]'
-}
-
 check_repo() {
 	command -v checkupdates > /dev/null || fail "checkupdates not found (install pacman-contrib)"
 	local out rc
 	# A private, persistent sync database: incremental syncs, and no lock contention with
-	# Cachy-Update or other checkupdates users.
+	# pacman, Arch-Update or other checkupdates users.
 	out="$(LC_ALL=C CHECKUPDATES_DB="$work_dir/checkup-db" checkupdates --nocolor 2> "$err_file")"
 	rc=$?
 	case "$rc" in
@@ -69,21 +61,8 @@ check_repo() {
 }
 
 check_aur() {
-	conf_flag NoAUR && skip "Disabled by NoAUR in arch-update.conf"
-
 	local helper out rc
-	helper="$(conf_value AURHelper '(paru|yay|pikaur)')"
-	if [[ -n "$helper" ]]; then
-		command -v "$helper" > /dev/null || skip "AURHelper=$helper is set in arch-update.conf but not installed"
-	else
-		for candidate in paru yay pikaur; do
-			if command -v "$candidate" > /dev/null; then
-				helper="$candidate"
-				break
-			fi
-		done
-		[[ -n "$helper" ]] || skip "No AUR helper installed (paru, yay or pikaur)"
-	fi
+	helper="$(aur_helper)" || skip "$helper"
 
 	out="$(LC_ALL=C "$helper" --color never -Qua < /dev/null 2> "$err_file")"
 	rc=$?

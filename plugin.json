@@ -1,8 +1,8 @@
 {
-    "id": "cachyUpdates",
-    "name": "CachyOS Updates",
-    "description": "Repository, AUR, Flatpak and mise update status, with Cachy-Update and mise upgrades launched in your terminal",
-    "version": "0.2.0",
+    "id": "archUpdates",
+    "name": "Arch Updates",
+    "description": "Repository, AUR, Flatpak and mise update status for Arch Linux and Arch-based systems such as CachyOS. Updates run in your terminal with Arch-Update / Cachy-Update or directly with your AUR helper or pacman.",
+    "version": "0.3.0",
     "author": "Hadrien Boutteville",
     "type": "composite",
     "capabilities": ["daemon", "dankbar-widget", "dash-tab"],
@@ -18,6 +18,6 @@
     },
     "settings": "./UpdatesSettings.qml",
     "requires_dms": ">=2.1.0",
-    "dependencies": ["cachy-update", "pacman-contrib", "mise", "systemd"],
+    "dependencies": ["pacman-contrib", "systemd"],
     "permissions": ["settings_read", "settings_write", "process", "network"]
 }
