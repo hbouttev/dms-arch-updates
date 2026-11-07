@@ -13,11 +13,13 @@ StyledRect {
     property bool checking: false
     property bool compact: false
     property real now: Date.now()
+    // False while the view is not on screen (the dash keeps its content alive when closed).
+    property bool live: true
 
-    readonly property var info: U.SOURCE_INFO[sourceId] || {
-        label: sourceId,
-        icon: "help"
-    }
+    readonly property UpdateTexts texts: UpdateTexts {}
+    readonly property string errorText: texts.errorText(source)
+    readonly property string warningText: texts.warningText(source)
+    readonly property string reasonText: texts.reasonText(source)
     readonly property int count: source.state === "disabled" ? 0 : source.items.length
     readonly property bool failed: source.state === "error"
     readonly property bool stale: failed && source.checkedAt > 0
@@ -34,7 +36,7 @@ StyledRect {
         case "error":
             return stale ? I18n.trFor("archUpdates", "Check failed · last success %1").arg(U.formatTime(source.checkedAt, now)) : I18n.trFor("archUpdates", "Check failed");
         default:
-            return (count > 0 ? "" : I18n.trFor("archUpdates", "Up to date") + " · ") + U.formatTime(source.checkedAt, now);
+            return count > 0 ? U.formatTime(source.checkedAt, now) : I18n.trFor("archUpdates", "Up to date · %1").arg(U.formatTime(source.checkedAt, now));
         }
     }
 
@@ -60,8 +62,8 @@ StyledRect {
                 id: sourceIcon
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
-                name: root.info.icon
-                size: Theme.iconSizeSmall + 4
+                name: U.SOURCE_ICONS[root.sourceId] || "help"
+                size: Theme.iconSizeMedium
                 color: root.count > 0 ? Theme.primary : Theme.surfaceVariantText
             }
 
@@ -70,7 +72,7 @@ StyledRect {
                 anchors.left: sourceIcon.right
                 anchors.leftMargin: Theme.spacingS
                 anchors.verticalCenter: parent.verticalCenter
-                text: root.info.label
+                text: root.texts.sourceLabel(root.sourceId)
                 font.pixelSize: Theme.fontSizeMedium
                 font.weight: Theme.fontWeightMedium
                 color: Theme.surfaceText
@@ -100,12 +102,11 @@ StyledRect {
             DSpinner {
                 id: spinner
                 visible: root.checking
-                running: visible
+                running: visible && root.live
                 anchors.right: statusLabel.left
                 anchors.rightMargin: Theme.spacingXS
                 anchors.verticalCenter: parent.verticalCenter
                 size: Theme.iconSizeSmall
-                strokeWidth: 2
             }
 
             StyledText {
@@ -123,9 +124,9 @@ StyledRect {
         }
 
         StyledText {
-            visible: root.failed && root.source.error.length > 0
+            visible: root.failed && root.errorText.length > 0
             width: parent.width
-            text: root.source.error
+            text: root.errorText
             wrapMode: Text.Wrap
             maximumLineCount: root.compact ? 2 : 6
             elide: Text.ElideRight
@@ -134,9 +135,9 @@ StyledRect {
         }
 
         StyledText {
-            visible: !root.compact && root.source.state === "ok" && root.source.warning.length > 0
+            visible: !root.compact && root.source.state === "ok" && root.warningText.length > 0
             width: parent.width
-            text: root.source.warning
+            text: root.warningText
             wrapMode: Text.Wrap
             maximumLineCount: 4
             elide: Text.ElideRight
@@ -145,9 +146,9 @@ StyledRect {
         }
 
         StyledText {
-            visible: root.source.state === "disabled" && root.source.reason.length > 0
+            visible: root.source.state === "disabled" && root.reasonText.length > 0
             width: parent.width
-            text: root.source.reason
+            text: root.reasonText
             wrapMode: Text.Wrap
             font.pixelSize: Theme.fontSizeSmall
             color: Theme.surfaceVariantText

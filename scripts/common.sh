@@ -6,6 +6,13 @@
 
 au_conf="${XDG_CONFIG_HOME:-$HOME/.config}/arch-update/arch-update.conf"
 
+# Prints a message the plugin shows: "code<TAB>English text[<TAB>argument...]". The plugin
+# translates known codes (see UpdateTexts.qml) and shows the English text for others.
+coded() {
+	local IFS=$'\t'
+	printf '%s\n' "$*"
+}
+
 conf_flag() {
 	[[ -f "$au_conf" ]] && grep -Eq "^[[:space:]]*$1[[:space:]]*$" "$au_conf"
 }
@@ -30,11 +37,11 @@ arch_update_command() {
 
 # The AUR helper, chosen like Arch-Update does: AURHelper from its config, otherwise the
 # first installed of paru, yay and pikaur. Prints the helper and returns 0; otherwise
-# prints why there is none and returns 1.
+# prints why there is none (a coded message) and returns 1.
 aur_helper() {
 	local helper candidate
 	if conf_flag NoAUR; then
-		echo "Disabled by NoAUR in arch-update.conf"
+		coded no-aur "Disabled by NoAUR in arch-update.conf"
 		return 1
 	fi
 	helper="$(conf_value AURHelper '(paru|yay|pikaur)')"
@@ -43,7 +50,7 @@ aur_helper() {
 			printf '%s\n' "$helper"
 			return 0
 		fi
-		echo "AURHelper=$helper is set in arch-update.conf but not installed"
+		coded aur-helper-missing "AURHelper=$helper is set in arch-update.conf but not installed" "$helper"
 		return 1
 	fi
 	for candidate in paru yay pikaur; do
@@ -52,7 +59,7 @@ aur_helper() {
 			return 0
 		fi
 	done
-	echo "No AUR helper installed (paru, yay or pikaur)"
+	coded no-aur-helper "No AUR helper installed (paru, yay or pikaur)"
 	return 1
 }
 

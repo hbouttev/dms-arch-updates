@@ -10,6 +10,9 @@ Item {
     property var item: ({})
     property bool dimmed: false
 
+    readonly property UpdateTexts texts: UpdateTexts {}
+    readonly property string note: texts.itemNote(item)
+
     readonly property string versions: {
         const from = item.from || "";
         const to = item.to || "";
@@ -26,8 +29,8 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         width: Math.min(implicitWidth, parent.width * 0.55)
         elide: Text.ElideRight
-        text: root.item.note ? U.escapeHtml(root.item.name) + "&nbsp;&nbsp;<font color=\"" + Theme.surfaceVariantText + "\">" + U.escapeHtml(root.item.note) + "</font>" : root.item.name
-        textFormat: root.item.note ? Text.StyledText : Text.PlainText
+        text: root.note ? U.escapeHtml(root.item.name) + "&nbsp;&nbsp;<font color=\"" + Theme.surfaceVariantText + "\">" + U.escapeHtml(root.note) + "</font>" : root.item.name
+        textFormat: root.note ? Text.StyledText : Text.PlainText
         font.pixelSize: Theme.fontSizeSmall
         color: root.dimmed ? Theme.surfaceVariantText : Theme.surfaceText
     }
@@ -42,7 +45,7 @@ Item {
         elide: Text.ElideLeft
         text: root.versions
         font.pixelSize: Theme.fontSizeSmall
-        font.family: "monospace"
+        font.family: Theme.monoFontFamily
         color: Theme.surfaceVariantText
     }
 }

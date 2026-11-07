@@ -24,7 +24,7 @@ helper="" aur_note=""
 if out="$(aur_helper)"; then
 	helper="$out"
 else
-	aur_note="$out"
+	aur_note="$(printf '%s' "$out" | cut -f 2)"
 fi
 flatpak=false
 flatpak_in_use && flatpak=true

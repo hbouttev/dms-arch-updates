@@ -169,8 +169,9 @@ UpdatesPanel.qml         the view shared by the popout (compact) and the tab
 SourceSection.qml        one source card; UpdateRow.qml: one update line
 CheckProcess.qml         Process wrapper that reports exit code, stdout and stderr together
 UpdatesSettings.qml      settings page; UpdateMethodSetting.qml: the update method choice
+UpdateTexts.qml          all wording built from codes and values (translatable)
 logic/Updates.js         parsing, state merging, terminal and update method choice (pure functions)
-scripts/common.sh        arch-update.conf options, AUR helper and Arch-Update detection
+scripts/common.sh        arch-update.conf options, AUR helper and Arch-Update detection, coded messages
 scripts/check.sh         per-source checks
 scripts/detect.sh        installed update tools, as JSON for the daemon
 scripts/run-update.sh    update runner in the terminal
@@ -178,7 +179,7 @@ tests/run.mjs            tests for logic/Updates.js
 ```
 
 ```sh
-node tests/run.mjs                            # logic tests
+node tests/run.mjs                            # logic tests, and message codes vs UpdateTexts.qml
 scripts/check.sh aur; echo $?                 # one source by hand (0 ok, 3 n/a, else failure)
 scripts/detect.sh                             # update tools found
 dms ipc call plugins reload archUpdates       # reload after editing a component (see below)
@@ -188,5 +189,23 @@ journalctl --user -u dms -f | grep archUpdates  # logs
 `dms ipc call plugins reload` only picks up changes to the component files named in
 `plugin.json`. Qt caches everything else until the shell restarts: the shared views
 (`UpdatesPanel.qml`, `SourceSection.qml`, `UpdateRow.qml`, `CheckProcess.qml`,
-`UpdateMethodSetting.qml`), the `.pragma library` script `logic/Updates.js`, and the list of
-files in the plugin folder. After editing those, or adding a file, run `dms restart`.
+`UpdateMethodSetting.qml`, `UpdateTexts.qml`), the `.pragma library` script `logic/Updates.js`,
+and the list of files in the plugin folder. After editing those, or adding a file, run
+`dms restart`.
+
+### Translations
+
+The plugin is ready for translation but ships none yet. Every string it shows goes through
+`I18n.trFor("archUpdates", "…")` in a QML file, which is what DMS's translation tooling extracts.
+
+- `logic/Updates.js` holds no wording: it returns codes and values (for example
+  `{unit: "minutes", value: 5}`), and `UpdateTexts.qml` turns them into text.
+- Messages from the check scripts are printed as `code<TAB>English text[<TAB>argument…]` (see
+  `coded` in `scripts/common.sh`), so the scripts stay readable on their own. `UpdateTexts.qml`
+  translates known codes and shows the English text for any other. `tests/run.mjs` fails if a
+  code has no case there.
+- Error output from pacman, the AUR helper, Flatpak and mise is shown as the tool printed it.
+  The terminal update script (`run-update.sh`) is not part of the DMS interface and stays English.
+
+A translation is a `translations/<locale>.json` file (`fr.json`, `pt_BR.json`…) mapping each
+English string to its translation, as described in DMS's plugin guide.

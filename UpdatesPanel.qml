@@ -15,6 +15,8 @@ ColumnLayout {
     // Height limit of the scrolling source list (the popout passes a fixed value; in the
     // dashboard the panel is given a height and the list takes the remaining space).
     property real maxListHeight: Infinity
+    // False while not on screen; stops animations (the dash keeps its content alive).
+    property bool live: true
 
     // Emitted after an update terminal was launched (the popout closes itself).
     signal launched
@@ -32,6 +34,8 @@ ColumnLayout {
     readonly property var checkingIds: daemon ? daemon.checkingIds : []
     // Name of the system update command ("Cachy-Update", "yay -Syu", ...), empty if unknown
     readonly property string systemLabel: daemon ? daemon.updateMethod.label : ""
+
+    readonly property UpdateTexts texts: UpdateTexts {}
 
     readonly property var visibleIds: U.SOURCE_IDS.filter(id => {
         if (!compact)
@@ -59,7 +63,7 @@ ColumnLayout {
         if (checking)
             parts.push(I18n.trFor("archUpdates", "Checking…"));
         else if (daemon.lastRoundAt > 0)
-            parts.push(I18n.trFor("archUpdates", "Checked %1").arg(U.formatAgo(daemon.lastRoundAt, now)));
+            parts.push(I18n.trFor("archUpdates", "Checked %1").arg(texts.elapsed(daemon.lastRoundAt, now)));
         if (incomplete && total > 0)
             parts.push(I18n.trFor("archUpdates", "some checks failed"));
         if (!compact && !checking && daemon.nextCheckAt > now)
@@ -83,7 +87,7 @@ ColumnLayout {
         DIcon {
             Layout.alignment: Qt.AlignVCenter
             name: root.total > 0 ? "system_update_alt" : (root.incomplete || !root.ready ? "error" : (root.neverChecked ? "schedule" : "check_circle"))
-            size: Theme.iconSize + 4
+            size: Theme.iconSize
             color: root.total > 0 ? Theme.primary : (root.incomplete || !root.ready ? Theme.warning : Theme.surfaceVariantText)
         }
 
@@ -137,7 +141,7 @@ ColumnLayout {
 
             DIcon {
                 name: "terminal"
-                size: Theme.iconSizeSmall + 2
+                size: Theme.iconSizeSmall
                 color: Theme.onPrimaryContainer
             }
 
@@ -153,7 +157,7 @@ ColumnLayout {
 
     // ---- Sources ------------------------------------------------------------------
 
-    Flickable {
+    DFlickable {
         id: list
         Layout.fillWidth: true
         Layout.fillHeight: true
@@ -180,6 +184,7 @@ ColumnLayout {
                     checking: root.checkingIds.includes(modelData)
                     compact: root.compact
                     now: root.now
+                    live: root.live
                 }
             }
         }
@@ -246,7 +251,7 @@ ColumnLayout {
     StyledText {
         Layout.fillWidth: true
         visible: root.ready && root.daemon.terminal.argv.length === 0
-        text: visible ? `${root.daemon.terminalDescription} · ${I18n.trFor("archUpdates", "set one in DMS settings, $TERMINAL or the plugin settings")}` : ""
+        text: visible ? I18n.trFor("archUpdates", "%1 · set one in DMS settings, $TERMINAL or the plugin settings").arg(root.daemon.terminalDescription) : ""
         wrapMode: Text.Wrap
         font.pixelSize: Theme.fontSizeSmall
         color: Theme.error

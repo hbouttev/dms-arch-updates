@@ -66,19 +66,19 @@ PluginSettings {
         description: I18n.trFor("archUpdates", "Per source; a source that takes longer is reported as failed")
         options: [
             {
-                label: "30 s",
+                label: I18n.trFor("archUpdates", "30 s"),
                 value: "30"
             },
             {
-                label: "60 s",
+                label: I18n.trFor("archUpdates", "60 s"),
                 value: "60"
             },
             {
-                label: "2 min",
+                label: I18n.trFor("archUpdates", "2 min"),
                 value: "120"
             },
             {
-                label: "5 min",
+                label: I18n.trFor("archUpdates", "5 min"),
                 value: "300"
             }
         ]

@@ -40,5 +40,6 @@ DashTabComponent {
         anchors.fill: parent
         daemon: root.daemon
         compact: false
+        live: root.live
     }
 }

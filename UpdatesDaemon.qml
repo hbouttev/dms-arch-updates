@@ -2,18 +2,18 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import qs.Common
+import qs.Modules.Plugins
 import qs.Services
 import "logic/Updates.js" as U
 
 // Single owner of update state. DMS instantiates it once per shell, independently of the
 // bar widgets (one per screen) and of the dash tab (created only while shown). Views bind
 // to its properties through PluginService.pluginDaemonInstances and call its functions.
-// A non-visual Scope: the daemon is not placed in any window.
-Scope {
+// A PluginComponent without bar pills, as DMS daemons are; pluginId and pluginService are
+// set by DMS when it creates it.
+PluginComponent {
     id: root
 
-    property string pluginId: "archUpdates"
-    property var pluginService: null
     property var popoutService: null
 
     // Settings (see UpdatesSettings.qml)
@@ -57,12 +57,15 @@ Scope {
         envTerminal: envTerminal,
         installed: installedTerminals
     })
-    readonly property string terminalDescription: U.describeTerminal(terminal)
+    readonly property string terminalDescription: texts.terminalDescription(terminal)
 
     // Update tools found by scripts/detect.sh, null until detected; see U.resolveUpdateMethod.
     property var updateTools: null
     readonly property var updateMethod: U.resolveUpdateMethod(updateMethodSetting, updateTools)
-    readonly property string systemUpdateDescription: U.describeSystemUpdate(updateMethod)
+    readonly property string systemUpdateDescription: texts.systemUpdateDescription(updateMethod)
+    readonly property string updateMethodNote: texts.fallbackNote(updateMethod)
+
+    readonly property UpdateTexts texts: UpdateTexts {}
 
     readonly property real intervalMs: Math.max(5, intervalMinutes) * 60 * 1000
     readonly property var updateModes: ["system", "mise", "mise-bump", "all"]
@@ -85,7 +88,9 @@ Scope {
             if (id === "mise" && !miseEnabled) {
                 _pending.mise = {
                     state: "disabled",
+                    reasonCode: "mise-disabled",
                     reason: "Disabled in plugin settings",
+                    reasonArgs: [],
                     items: [],
                     bumpItems: []
                 };
@@ -100,7 +105,7 @@ Scope {
             if (id === "mise" && miseBumpEnabled)
                 argv.push("--bump");
             if (!processFor(id).start(argv))
-                _onSourceFinished(id, 1, "", "The previous check of this source is still running");
+                _onSourceFinished(id, 1, "", "busy\tThe previous check of this source is still running");
         }
         if (ids.length === 0)
             _commit();
@@ -163,7 +168,7 @@ Scope {
                 setting: updateMethodSetting,
                 method: updateMethod.method,
                 description: systemUpdateDescription,
-                note: updateMethod.note || undefined,
+                note: updateMethodNote || undefined,
                 tools: updateTools
             },
             sources: {}
@@ -174,9 +179,9 @@ Scope {
                 state: s.state,
                 updates: s.items.length,
                 checkedAt: s.checkedAt ? new Date(s.checkedAt).toISOString() : null,
-                error: s.error || undefined,
-                warning: s.warning || undefined,
-                reason: s.reason || undefined
+                error: texts.errorText(s) || undefined,
+                warning: texts.warningText(s) || undefined,
+                reason: texts.reasonText(s) || undefined
             };
         }
         return JSON.stringify(out, null, 2);

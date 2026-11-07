@@ -17,6 +17,7 @@ Column {
     property string value: "auto"
 
     readonly property var tools: daemon ? daemon.updateTools : null
+    readonly property UpdateTexts texts: UpdateTexts {}
     // Unknown until detected: then nothing is greyed out.
     readonly property bool archUpdateInstalled: !tools || !!tools.archUpdate
 
@@ -24,7 +25,7 @@ Column {
         {
             value: "auto",
             title: I18n.trFor("archUpdates", "Automatic"),
-            description: I18n.trFor("archUpdates", "Arch-Update or Cachy-Update when installed, otherwise direct.") + (tools ? " " + I18n.trFor("archUpdates", "Currently: %1.").arg(U.describeSystemUpdate(U.resolveUpdateMethod("auto", tools))) : ""),
+            description: I18n.trFor("archUpdates", "Arch-Update or Cachy-Update when installed, otherwise direct.") + (tools ? " " + I18n.trFor("archUpdates", "Currently: %1.").arg(texts.systemUpdateDescription(U.resolveUpdateMethod("auto", tools))) : ""),
             available: true
         },
         {
@@ -36,7 +37,7 @@ Column {
         {
             value: "direct",
             title: I18n.trFor("archUpdates", "Direct"),
-            description: (tools ? U.describeSystemUpdate(U.resolveUpdateMethod("direct", tools)) : I18n.trFor("archUpdates", "Your AUR helper's -Syu (repositories and AUR), or pacman -Syu, then flatpak update")) + ". " + I18n.trFor("archUpdates", "No news or maintenance steps."),
+            description: (tools ? texts.systemUpdateDescription(U.resolveUpdateMethod("direct", tools)) : I18n.trFor("archUpdates", "Your AUR helper's -Syu (repositories and AUR), or pacman -Syu, then flatpak update")) + ". " + I18n.trFor("archUpdates", "No news or maintenance steps."),
             available: true
         }
     ]
@@ -90,11 +91,11 @@ Column {
             width: root.width
             implicitHeight: rowContent.implicitHeight + Theme.spacingM * 2
             radius: Theme.cornerRadius
-            color: selected ? Theme.surfaceContainerHighest : (mouse.containsMouse && modelData.available ? Theme.surfaceContainerHigh : "transparent")
+            color: selected ? Theme.surfaceContainerHighest : "transparent"
             opacity: modelData.available ? 1 : 0.5
 
-            border.width: activeFocus ? 2 : 0
-            border.color: Theme.primary
+            border.width: activeFocus ? Theme.focusRingWidth : 0
+            border.color: Theme.focusRingColor
 
             activeFocusOnTab: modelData.available
             Keys.onSpacePressed: root.choose(modelData.value)
@@ -124,7 +125,7 @@ Column {
 
                 Column {
                     width: parent.width - Theme.iconSize - parent.spacing
-                    spacing: 2
+                    spacing: Theme.spacingXXS
 
                     StyledText {
                         width: parent.width
@@ -143,12 +144,12 @@ Column {
                 }
             }
 
-            MouseArea {
-                id: mouse
-                anchors.fill: parent
-                hoverEnabled: true
+            // Hover, press and focus feedback, and the click
+            StateLayer {
+                disabled: !row.modelData.available
                 enabled: row.modelData.available
-                cursorShape: Qt.PointingHandCursor
+                focused: row.activeFocus
+                stateColor: Theme.surfaceText
                 onClicked: root.choose(row.modelData.value)
             }
         }
@@ -157,8 +158,8 @@ Column {
     // The saved choice is no longer installed (it was removed after being chosen).
     StyledText {
         width: parent.width
-        visible: !!root.daemon && root.daemon.updateMethod.note.length > 0
-        text: visible ? root.daemon.updateMethod.note + "." : ""
+        visible: text.length > 0
+        text: root.daemon ? root.daemon.updateMethodNote : ""
         wrapMode: Text.WordWrap
         font.pixelSize: Theme.fontSizeSmall
         color: Theme.warning
