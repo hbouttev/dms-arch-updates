@@ -130,7 +130,7 @@ dms ipc call dash open plugin_archUpdates # open the dashboard tab
 
 ## Install
 
-Requirements: DMS ≥ 2.1, `pacman-contrib` (checkupdates), a terminal (see [Terminal](#terminal)),
+Requirements: DMS ≥ 2.0, `pacman-contrib` (checkupdates), a terminal (see [Terminal](#terminal)),
 systemd user session. Optional: Arch-Update (`arch-update` from the AUR) or Cachy-Update
 (`cachy-update` on CachyOS), an AUR helper (paru, yay or pikaur), Flatpak, mise.
 
