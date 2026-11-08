@@ -9,7 +9,7 @@
 //
 // Types are written as JSDoc for editors and `tsc --checkJs`; QML ignores them.
 
-// ---- Types --------------------------------------------------------------------------
+// ---- Types ------------------------------------------------------------------------
 
 /**
  * An update source, each checked by `scripts/check.sh <id>`.
@@ -170,7 +170,7 @@
  * @property {boolean} fallback Arch-Update was chosen but is not installed
  */
 
-// ---- Sources ------------------------------------------------------------------------
+// ---- Sources ----------------------------------------------------------------------
 
 /** @type {SourceId[]} */
 const SOURCE_IDS = ["repo", "aur", "flatpak", "mise"];
@@ -265,7 +265,7 @@ function restoreSources(saved) {
     return out;
 }
 
-// ---- Parsing check output -------------------------------------------------------------
+// ---- Parsing check output ---------------------------------------------------------
 
 /**
  * @param {string | null | undefined} text
@@ -383,7 +383,7 @@ function parseMise(text) {
     return { items, bumpItems, bumpFailed: data.bumpFailed === true };
 }
 
-// ---- Messages and results -------------------------------------------------------------
+// ---- Messages and results ---------------------------------------------------------
 
 /**
  * Non-empty lines without the tools' "error:" / "==> ERROR:" / "mise WARN" prefixes.
@@ -430,11 +430,10 @@ function scriptMessage(text, lines) {
 
 /**
  * A warning summary, plus whether it means some updates could not be checked.
- * @param {SourceId} id
  * @param {string} stderr
  * @returns {{ warning: string, partial: boolean }}
  */
-function summarizeWarnings(id, stderr) {
+function summarizeWarnings(stderr) {
     const lines = cleanLines(stderr);
     if (!lines.length)
         return { warning: "", partial: false };
@@ -494,7 +493,7 @@ function classifyResult(id, exitCode, stdout, stderr, timeoutSec) {
         const message = e instanceof Error ? e.message : String(e);
         return errorResult(result, "parse", `Could not parse output: ${message}`, [message]);
     }
-    Object.assign(result, summarizeWarnings(id, stderr));
+    Object.assign(result, summarizeWarnings(stderr));
     if (result.bumpFailed)
         result.partial = true;
     return result;
@@ -538,7 +537,7 @@ function mergeResult(prev, result, now) {
     return next;
 }
 
-// ---- Summaries ------------------------------------------------------------------------
+// ---- Summaries --------------------------------------------------------------------
 // They accept missing sources: views can evaluate them before the daemon exists.
 
 /**
@@ -589,32 +588,13 @@ function incomplete(sources) {
 
 /**
  * @param {Sources | null | undefined} sources
- * @returns {SourceId[]} the sources that failed their last check
- */
-function errorIds(sources) {
-    return SOURCE_IDS.filter(id => sources?.[id]?.state === "error");
-}
-
-/**
- * Oldest successful check among active sources; 0 when one was never checked.
- * @param {Sources | null | undefined} sources
- * @returns {number} time (ms)
- */
-function oldestCheck(sources) {
-    const active = SOURCE_IDS.map(id => sources?.[id]).filter(/** @returns {s is Source} */ s => !!s && s.state !== "disabled");
-    const times = active.map(s => s.checkedAt);
-    return times.length ? Math.min(...times) : 0;
-}
-
-/**
- * @param {Sources | null | undefined} sources
  * @returns {boolean} no source was ever checked
  */
 function neverChecked(sources) {
     return SOURCE_IDS.every(id => !sources?.[id] || sources[id].attemptedAt === 0);
 }
 
-// ---- Time -----------------------------------------------------------------------------
+// ---- Time -------------------------------------------------------------------------
 
 /**
  * Delay before the next check after `errorStreak` consecutive rounds with failures: 5, 10,
@@ -830,7 +810,7 @@ function resolveUpdateMethod(setting, tools) {
     };
 }
 
-// ---- Text helpers -----------------------------------------------------------------------
+// ---- Rich text --------------------------------------------------------------------
 
 /**
  * Escapes text for a StyledText with Text.StyledText formatting.
@@ -839,14 +819,4 @@ function resolveUpdateMethod(setting, tools) {
  */
 function escapeHtml(text) {
     return String(text || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
-
-/**
- * @param {number} n
- * @param {string} one
- * @param {string} many
- * @returns {string}
- */
-function plural(n, one, many) {
-    return n === 1 ? one : many;
 }
