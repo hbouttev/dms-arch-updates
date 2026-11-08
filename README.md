@@ -176,17 +176,21 @@ SourceSection.qml        one source card; UpdateRow.qml: one update line
 CheckProcess.qml         Process wrapper that reports exit code, stdout and stderr together
 UpdatesSettings.qml      settings page; UpdateMethodSetting.qml: the update method choice
 UpdateTexts.qml          all wording built from codes and values (translatable)
-logic/Updates.js         parsing, state merging, terminal and update method choice (pure functions)
+logic/Updates.js         parsing, state merging, terminal and update method choice (pure functions,
+                         typed with JSDoc)
 scripts/common.sh        arch-update.conf options, AUR helper and Arch-Update detection, coded messages
 scripts/check.sh         per-source checks
 scripts/detect.sh        installed update tools, as JSON for the daemon
 scripts/run-update.sh    update runner in the terminal
 tests/run.mjs            tests for logic/Updates.js and the message codes
+tests/typecheck.mjs      type check of logic/Updates.js
+jsconfig.json            TypeScript options for that check and for editors
 assets/                 screenshots for the README; popout.png is the plugin registry's
 ```
 
 ```sh
 node tests/run.mjs                            # logic tests, and message codes vs UpdateTexts.qml
+node tests/typecheck.mjs                      # JSDoc types (TypeScript through npx)
 scripts/check.sh aur; echo $?                 # one source by hand (0 ok, 3 n/a, else failure)
 scripts/detect.sh                             # update tools found
 dms ipc call plugins reload archUpdates       # reload after editing a component (see below)

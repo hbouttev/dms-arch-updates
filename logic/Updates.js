@@ -6,10 +6,181 @@
 // No user-facing wording either: functions return codes and values, and UpdateTexts.qml
 // turns them into translatable text (I18n.trFor only works, and is only extracted, in QML).
 // English text kept here is a fallback for unknown codes and for the status IPC.
+//
+// Types are written as JSDoc for editors and `tsc --checkJs`; QML ignores them.
 
+// ---- Types --------------------------------------------------------------------------
+
+/**
+ * An update source, each checked by `scripts/check.sh <id>`.
+ * @typedef {"repo" | "aur" | "flatpak" | "mise"} SourceId
+ */
+
+/**
+ * State of a source:
+ * - "unknown": never checked;
+ * - "ok": the last check succeeded;
+ * - "error": the last check failed (items are from the last success, if any);
+ * - "disabled": the source does not apply (`reason` says why).
+ * @typedef {"unknown" | "ok" | "error" | "disabled"} SourceState
+ */
+
+/**
+ * One available update, as listed in the views.
+ * @typedef {object} UpdateItem
+ * @property {string} name package, application or tool
+ * @property {string} from installed version, empty when the source does not say
+ * @property {string} to available version (for Flatpak, the branch when there is no version)
+ * @property {string} note shown after the name: repository tag, Flatpak id and installation,
+ *     or the mise request a bump would change
+ * @property {string} [requested] mise: the pinned version request, empty for "latest"
+ */
+
+/**
+ * Everything known about one source; persisted in DMS's plugin state.
+ *
+ * Messages come as a code with arguments, which UpdateTexts.qml translates, plus English
+ * text used when the code is empty or unknown (a tool's own output has no code).
+ * @typedef {object} Source
+ * @property {SourceId} id
+ * @property {SourceState} state
+ * @property {UpdateItem[]} items updates within the configured versions; counted
+ * @property {UpdateItem[]} bumpItems mise upgrades past the configured versions; listed only
+ * @property {number} checkedAt time of the last successful check (ms), 0 when never
+ * @property {number} attemptedAt time of the last check, successful or not (ms), 0 when never
+ * @property {string} error why the last check failed, in English or as the tool printed it
+ * @property {string} errorCode known failure, e.g. "timeout" or "aur-check-failed"; empty
+ *     when `error` is a tool's own output
+ * @property {string[]} errorArgs values for the error message
+ * @property {string} warning tool warnings, shown as is
+ * @property {boolean} partial the check succeeded but some entries could not be checked
+ * @property {boolean} bumpFailed mise: the list past the configured versions could not be
+ *     fetched
+ * @property {string} reason why a disabled source does not apply, in English
+ * @property {string} reasonCode e.g. "no-aur" or "mise-missing"
+ * @property {string[]} reasonArgs values for the reason message
+ */
+
+/**
+ * All sources by id: the daemon's `sources` property.
+ * @typedef {Record<SourceId, Source>} Sources
+ */
+
+/**
+ * One check.sh run turned into data, from {@link classifyResult}; {@link mergeResult}
+ * applies it to the previous {@link Source}.
+ * @typedef {object} CheckResult
+ * @property {"ok" | "error" | "disabled"} state
+ * @property {UpdateItem[]} items
+ * @property {UpdateItem[]} bumpItems
+ * @property {string} error
+ * @property {string} errorCode
+ * @property {string[]} errorArgs
+ * @property {string} warning
+ * @property {boolean} partial
+ * @property {boolean} bumpFailed
+ * @property {string} reason
+ * @property {string} reasonCode
+ * @property {string[]} reasonArgs
+ */
+
+/**
+ * A message from the scripts, from {@link parseCoded}: `code<TAB>English text[<TAB>arg…]`.
+ * @typedef {object} CodedMessage
+ * @property {string} code empty when the message is a tool's own output
+ * @property {string} text English text, or the tool's output
+ * @property {string[]} args
+ */
+
+/**
+ * One tool in the JSON of `mise outdated --json`, keyed by tool name.
+ * @typedef {object} MiseOutdated
+ * @property {string} [name]
+ * @property {string} [current] installed version
+ * @property {string} [latest] newest version allowed by the request (with --bump: the newest)
+ * @property {string} [requested] version request in the config, e.g. "latest" or "22"
+ * @property {string | null} [bump] with --bump: the request a bump would write
+ */
+
+/**
+ * A {@link MiseOutdated} entry with every field present.
+ * @typedef {object} MiseEntry
+ * @property {string} name
+ * @property {string} from
+ * @property {string} to
+ * @property {string} requested
+ * @property {string} bump empty when the upgrade needs no bump
+ */
+
+/**
+ * Time since an event, from {@link elapsed}; UpdateTexts.qml words it.
+ * @typedef {object} Elapsed
+ * @property {"never" | "now" | "minutes" | "hours" | "days"} unit
+ * @property {number} value 0 for "never" and "now"
+ */
+
+/**
+ * Where the update terminal comes from, in {@link resolveTerminal}'s order; "none" when no
+ * terminal was found.
+ * @typedef {"custom" | "dms" | "env" | "detected" | "none"} TerminalSource
+ */
+
+/**
+ * Inputs of {@link resolveTerminal}.
+ * @typedef {object} TerminalOptions
+ * @property {string} [custom] the plugin's "Terminal command" setting
+ * @property {string} [dmsOverride] DMS's terminal setting
+ * @property {string} [envTerminal] $TERMINAL
+ * @property {string[] | null} [installed] candidates found on PATH, null while unknown
+ */
+
+/**
+ * The terminal update commands open in, from {@link resolveTerminal}.
+ * @typedef {object} Terminal
+ * @property {string[]} argv prefix the update command is appended to; empty when none
+ * @property {string} name program name, for display
+ * @property {TerminalSource} source
+ * @property {string[]} missing configured terminals that are not installed
+ */
+
+/**
+ * The "System update method" setting. "arch-update" covers Cachy-Update, CachyOS's fork
+ * of the same script.
+ * @typedef {"auto" | "arch-update" | "direct"} UpdateMethod
+ */
+
+/**
+ * Update tools found by scripts/detect.sh.
+ * @typedef {object} UpdateTools
+ * @property {string} archUpdate "cachy-update", "arch-update" or empty
+ * @property {string} aurHelper "paru", "yay", "pikaur" or empty
+ * @property {string} [aurNote] why there is no AUR helper, in English
+ * @property {boolean} flatpak Flatpak is installed and in use
+ */
+
+/**
+ * What a system update will run, from {@link resolveUpdateMethod}.
+ * @typedef {object} ResolvedUpdateMethod
+ * @property {UpdateMethod} method passed to run-update.sh; "auto" only while the tools are
+ *     not detected yet (the script then resolves it itself)
+ * @property {string} label command or product name that will run (not translated), empty
+ *     while unknown
+ * @property {string} aurHelper the AUR helper a direct update uses, empty for pacman
+ * @property {boolean} flatpak a direct update also runs `flatpak update`
+ * @property {boolean} fallback Arch-Update was chosen but is not installed
+ */
+
+// ---- Sources ------------------------------------------------------------------------
+
+/** @type {SourceId[]} */
 const SOURCE_IDS = ["repo", "aur", "flatpak", "mise"];
+/** @type {SourceId[]} */
 const SYSTEM_SOURCE_IDS = ["repo", "aur", "flatpak"];
 
+/**
+ * Material Symbols icon of each source.
+ * @type {Record<SourceId, string>}
+ */
 const SOURCE_ICONS = {
     repo: "inventory_2",
     aur: "deployed_code",
@@ -23,51 +194,55 @@ const EXIT_NOT_APPLICABLE = 3;
 const EXIT_TIMEOUT = 124;
 const EXIT_KILLED = 137;
 
+/** @type {SourceState[]} */
 const SOURCE_STATES = ["ok", "error", "disabled", "unknown"];
 
+/**
+ * A source that was never checked. The fields are described on {@link Source}.
+ * @param {SourceId} id
+ * @returns {Source}
+ */
 function emptySource(id) {
     return {
         id,
-        // "unknown": never checked; "ok": last check succeeded;
-        // "error": last check failed (items are from the last success, if any);
-        // "disabled": source does not apply (reason says why).
         state: "unknown",
         items: [],
         bumpItems: [],
         checkedAt: 0,
         attemptedAt: 0,
-        // Why the last check failed: errorCode names a known failure (args fill it in) and
-        // is empty when error holds the tool's own output, shown as is.
         error: "",
         errorCode: "",
         errorArgs: [],
-        // Tool warnings, shown as is
         warning: "",
-        // true when the check succeeded but some entries could not be checked
         partial: false,
-        // mise: the list beyond the configured versions could not be fetched
         bumpFailed: false,
-        // Why a disabled source does not apply (same code/args scheme as errors)
         reason: "",
         reasonCode: "",
         reasonArgs: []
     };
 }
 
+/** @returns {Sources} */
 function emptySources() {
-    const out = {};
+    const out = /** @type {Sources} */ ({});
     for (const id of SOURCE_IDS)
         out[id] = emptySource(id);
     return out;
 }
 
-// Restores persisted state, tolerating missing or malformed entries.
+/**
+ * Restores persisted state, tolerating missing or malformed entries.
+ * @param {unknown} saved what plugin state returned: normally a {@link Sources}, but read
+ *     from disk, so anything
+ * @returns {Sources}
+ */
 function restoreSources(saved) {
     const out = emptySources();
     if (!saved || typeof saved !== "object")
         return out;
     for (const id of SOURCE_IDS) {
-        const s = saved[id];
+        /** @type {any} */
+        const s = /** @type {Record<string, unknown>} */ (saved)[id];
         if (!s || typeof s !== "object")
             continue;
         Object.assign(out[id], {
@@ -90,15 +265,29 @@ function restoreSources(saved) {
     return out;
 }
 
+// ---- Parsing check output -------------------------------------------------------------
+
+/**
+ * @param {string | null | undefined} text
+ * @returns {string}
+ */
 function stripAnsi(text) {
     return String(text || "").replace(/\x1B\[[0-9;?]*[A-Za-z]/g, "");
 }
 
+/**
+ * @param {string} text
+ * @returns {string[]} trimmed lines, without ANSI codes and empty lines
+ */
 function nonEmptyLines(text) {
     return stripAnsi(text).split("\n").map(l => l.trim()).filter(l => l.length > 0);
 }
 
-// Parses pacman-style lines: "name 1.0-1 -> 1.1-1 [note]".
+/**
+ * Parses pacman-style lines: "name 1.0-1 -> 1.1-1 [note]".
+ * @param {string} text
+ * @returns {UpdateItem[]}
+ */
 function parseArrowList(text) {
     return nonEmptyLines(text).map(line => {
         const parts = line.split(/\s+/);
@@ -108,12 +297,23 @@ function parseArrowList(text) {
     });
 }
 
+/**
+ * Parses `<helper> -Qua`: pacman-style lines, minus the ones marked [ignored].
+ * @param {string} text
+ * @returns {UpdateItem[]}
+ */
 function parseAur(text) {
     return parseArrowList(nonEmptyLines(text).filter(l => !/\[ignored\]$/.test(l)).join("\n"));
 }
 
-// Lines produced by check.sh: application \t name \t version \t branch \t installation
+/**
+ * Parses the lines check.sh prints for Flatpak:
+ * application \t name \t version \t branch \t installation
+ * @param {string} text
+ * @returns {UpdateItem[]}
+ */
 function parseFlatpak(text) {
+    /** @type {UpdateItem[]} */
     const items = [];
     for (const line of stripAnsi(text).split("\n")) {
         const [app, name, version, branch, inst] = line.split("\t").map(f => (f || "").trim());
@@ -129,10 +329,15 @@ function parseFlatpak(text) {
     return items;
 }
 
+/**
+ * @param {Record<string, MiseOutdated> | null | undefined} obj JSON of `mise outdated --json`
+ * @returns {MiseEntry[]} sorted by tool name
+ */
 function miseEntries(obj) {
     if (!obj || typeof obj !== "object")
         return [];
     return Object.keys(obj).sort().map(key => {
+        /** @type {MiseOutdated} */
         const t = obj[key] || {};
         return {
             name: t.name || key,
@@ -144,17 +349,26 @@ function miseEntries(obj) {
     });
 }
 
-// check.sh prints {"outdated": <mise outdated --json>, "bump": <mise outdated --bump --json> | null,
-// "bumpFailed": bool}. Upgrades that only exist past the configured version request become
-// bumpItems. Items carry `requested` when it is a pinned version, for the note shown.
+/**
+ * Parses the mise check. check.sh prints {"outdated": <mise outdated --json>,
+ * "bump": <mise outdated --bump --json> | null, "bumpFailed": bool}. Upgrades that only exist
+ * past the configured version request become bumpItems. Items carry `requested` when it is a
+ * pinned version, for the note shown.
+ * @param {string} text
+ * @returns {{ items: UpdateItem[], bumpItems: UpdateItem[], bumpFailed: boolean }}
+ * @throws {SyntaxError} when the output is not JSON
+ */
 function parseMise(text) {
+    /** @type {{ outdated?: Record<string, MiseOutdated>, bump?: Record<string, MiseOutdated> | null, bumpFailed?: boolean }} */
     const data = JSON.parse(String(text || "").trim() || "{}");
     const outdated = miseEntries(data.outdated);
+    /** @type {Record<string, MiseEntry>} */
     const byName = {};
     const items = outdated.map(t => {
         byName[t.name] = t;
         return { name: t.name, from: t.from, to: t.to, note: "", requested: t.requested !== "latest" ? t.requested : "" };
     });
+    /** @type {UpdateItem[]} */
     const bumpItems = [];
     for (const t of miseEntries(data.bump)) {
         const within = byName[t.name];
@@ -169,22 +383,43 @@ function parseMise(text) {
     return { items, bumpItems, bumpFailed: data.bumpFailed === true };
 }
 
+// ---- Messages and results -------------------------------------------------------------
+
+/**
+ * Non-empty lines without the tools' "error:" / "==> ERROR:" / "mise WARN" prefixes.
+ * @param {string} text
+ * @returns {string[]}
+ */
 function cleanLines(text) {
     return nonEmptyLines(text).map(l => l.replace(/^==>\s*ERROR:\s*/, "").replace(/^error:\s*/i, "").replace(/^mise\s+(WARN|ERROR)\s+/, ""));
 }
 
+/**
+ * @param {string} text
+ * @param {number} count
+ * @returns {string} the last `count` clean lines, joined
+ */
 function lastLines(text, count) {
     return cleanLines(text).slice(-count).join("\n");
 }
 
-// A coded message from check.sh: "code<TAB>English text[<TAB>argument...]", or null.
+/**
+ * A coded message from check.sh: "code<TAB>English text[<TAB>argument...]", or null.
+ * @param {string | undefined} line
+ * @returns {CodedMessage | null}
+ */
 function parseCoded(line) {
     const m = /^([a-z][a-z0-9-]*)\t([^\t]*)((?:\t[^\t]*)*)$/.exec(String(line || "").trim());
     return m ? { code: m[1], text: m[2], args: m[3] ? m[3].slice(1).split("\t") : [] } : null;
 }
 
-// The last line of a script message, split into code, English text and arguments. A line
-// that is not coded (a tool's own output) comes back with an empty code.
+/**
+ * The last line of a script message, split into code, English text and arguments. A line
+ * that is not coded (a tool's own output) comes back with an empty code.
+ * @param {string} text stdout or stderr of a check
+ * @param {number} lines how many lines of uncoded output to keep
+ * @returns {CodedMessage}
+ */
 function scriptMessage(text, lines) {
     const all = stripAnsi(text).split("\n").map(l => l.replace(/\s+$/, "")).filter(l => l.trim().length > 0);
     const coded = parseCoded(all[all.length - 1]);
@@ -193,7 +428,12 @@ function scriptMessage(text, lines) {
     return { code: "", text: lastLines(text, lines), args: [] };
 }
 
-// A warning summary, plus whether it means some updates could not be checked.
+/**
+ * A warning summary, plus whether it means some updates could not be checked.
+ * @param {SourceId} id
+ * @param {string} stderr
+ * @returns {{ warning: string, partial: boolean }}
+ */
 function summarizeWarnings(id, stderr) {
     const lines = cleanLines(stderr);
     if (!lines.length)
@@ -204,13 +444,30 @@ function summarizeWarnings(id, stderr) {
     return { warning: lines.slice(-2).join("\n"), partial: false };
 }
 
+/**
+ * Marks `result` as failed.
+ * @param {CheckResult} result
+ * @param {string} code
+ * @param {string} text English message
+ * @param {(string | number)[]} args
+ * @returns {CheckResult} `result`
+ */
 function errorResult(result, code, text, args) {
     return Object.assign(result, { state: "error", errorCode: code, error: text, errorArgs: args.map(String) });
 }
 
-// Turns one check.sh run into a result: {state, items, bumpItems, error, errorCode, errorArgs,
-// warning, partial, bumpFailed, reason, reasonCode, reasonArgs}.
+/**
+ * Turns one check.sh run into a result.
+ * @param {SourceId} id
+ * @param {number} exitCode check.sh's exit code: 0 ok, 3 not applicable, 124 or 137 timed
+ *     out, anything else failed
+ * @param {string} stdout
+ * @param {string} stderr
+ * @param {number} timeoutSec the timeout the check ran under, for the message
+ * @returns {CheckResult}
+ */
 function classifyResult(id, exitCode, stdout, stderr, timeoutSec) {
+    /** @type {CheckResult} */
     const result = { state: "ok", items: [], bumpItems: [], error: "", errorCode: "", errorArgs: [], warning: "", partial: false, bumpFailed: false, reason: "", reasonCode: "", reasonArgs: [] };
     if (exitCode === EXIT_NOT_APPLICABLE) {
         const m = scriptMessage(stdout, 1);
@@ -234,7 +491,8 @@ function classifyResult(id, exitCode, stdout, stderr, timeoutSec) {
         else if (id === "mise")
             Object.assign(result, parseMise(stdout));
     } catch (e) {
-        return errorResult(result, "parse", `Could not parse output: ${e.message}`, [e.message]);
+        const message = e instanceof Error ? e.message : String(e);
+        return errorResult(result, "parse", `Could not parse output: ${message}`, [message]);
     }
     Object.assign(result, summarizeWarnings(id, stderr));
     if (result.bumpFailed)
@@ -242,8 +500,14 @@ function classifyResult(id, exitCode, stdout, stderr, timeoutSec) {
     return result;
 }
 
-// Applies a check result to the previous source state. A failed check keeps the last
-// successful items so the count never drops to a false "up to date".
+/**
+ * Applies a check result to the previous source state. A failed check keeps the last
+ * successful items so the count never drops to a false "up to date".
+ * @param {Source} prev
+ * @param {CheckResult} result
+ * @param {number} now time of the check (ms)
+ * @returns {Source} a new object; `prev` is not changed
+ */
 function mergeResult(prev, result, now) {
     const next = emptySource(prev.id);
     next.attemptedAt = now;
@@ -274,6 +538,15 @@ function mergeResult(prev, result, now) {
     return next;
 }
 
+// ---- Summaries ------------------------------------------------------------------------
+// They accept missing sources: views can evaluate them before the daemon exists.
+
+/**
+ * Number of updates counted for the bar: items of the given sources, disabled ones excluded.
+ * @param {Sources | null | undefined} sources
+ * @param {SourceId[]} [ids]
+ * @returns {number}
+ */
 function countOf(sources, ids = SOURCE_IDS) {
     let n = 0;
     for (const id of ids) {
@@ -284,16 +557,29 @@ function countOf(sources, ids = SOURCE_IDS) {
     return n;
 }
 
+/**
+ * Number of mise upgrades past the configured versions (not counted for the bar).
+ * @param {Sources | null | undefined} sources
+ * @returns {number}
+ */
 function bumpCount(sources) {
     const s = sources?.mise;
     return s && s.state !== "disabled" ? s.bumpItems.length : 0;
 }
 
+/**
+ * @param {Sources | null | undefined} sources
+ * @returns {boolean} some source failed its last check
+ */
 function hasErrors(sources) {
     return SOURCE_IDS.some(id => sources?.[id]?.state === "error");
 }
 
-// True when some source failed or could only be checked partially.
+/**
+ * True when some source failed or could only be checked partially.
+ * @param {Sources | null | undefined} sources
+ * @returns {boolean}
+ */
 function incomplete(sources) {
     return SOURCE_IDS.some(id => {
         const s = sources?.[id];
@@ -301,28 +587,54 @@ function incomplete(sources) {
     });
 }
 
+/**
+ * @param {Sources | null | undefined} sources
+ * @returns {SourceId[]} the sources that failed their last check
+ */
 function errorIds(sources) {
     return SOURCE_IDS.filter(id => sources?.[id]?.state === "error");
 }
 
-// Oldest successful check among active sources; 0 when one was never checked.
+/**
+ * Oldest successful check among active sources; 0 when one was never checked.
+ * @param {Sources | null | undefined} sources
+ * @returns {number} time (ms)
+ */
 function oldestCheck(sources) {
-    const times = SOURCE_IDS.map(id => sources?.[id]).filter(s => s && s.state !== "disabled").map(s => s.checkedAt);
+    const active = SOURCE_IDS.map(id => sources?.[id]).filter(/** @returns {s is Source} */ s => !!s && s.state !== "disabled");
+    const times = active.map(s => s.checkedAt);
     return times.length ? Math.min(...times) : 0;
 }
 
+/**
+ * @param {Sources | null | undefined} sources
+ * @returns {boolean} no source was ever checked
+ */
 function neverChecked(sources) {
     return SOURCE_IDS.every(id => !sources?.[id] || sources[id].attemptedAt === 0);
 }
 
-// Delay before the next check after `errorStreak` consecutive rounds with failures.
+// ---- Time -----------------------------------------------------------------------------
+
+/**
+ * Delay before the next check after `errorStreak` consecutive rounds with failures: 5, 10,
+ * 20… minutes, capped at the interval.
+ * @param {number} errorStreak
+ * @param {number} intervalMs the check interval
+ * @returns {number} ms
+ */
 function retryDelayMs(errorStreak, intervalMs) {
     if (errorStreak <= 0)
         return intervalMs;
     return Math.min(5 * 60 * 1000 * 2 ** Math.min(errorStreak - 1, 6), intervalMs);
 }
 
-// Time since `ms` as {unit, value}: unit is "never", "now", "minutes", "hours" or "days".
+/**
+ * Time since `ms`, rounded to the unit shown.
+ * @param {number} ms time of the event, 0 for never
+ * @param {number} now
+ * @returns {Elapsed}
+ */
 function elapsed(ms, now) {
     if (!ms)
         return { unit: "never", value: 0 };
@@ -338,11 +650,20 @@ function elapsed(ms, now) {
     return { unit: "days", value: Math.round(h / 24) };
 }
 
+/**
+ * @param {number} n
+ * @returns {string}
+ */
 function pad2(n) {
     return String(n).padStart(2, "0");
 }
 
-// "HH:MM" today, "YYYY-MM-DD HH:MM" otherwise; empty for 0.
+/**
+ * "HH:MM" today, "YYYY-MM-DD HH:MM" otherwise; empty for 0.
+ * @param {number} ms
+ * @param {number} [now] defaults to the current time
+ * @returns {string}
+ */
 function formatTime(ms, now) {
     if (!ms)
         return "";
@@ -353,9 +674,14 @@ function formatTime(ms, now) {
     return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${hm}`;
 }
 
-// Splits a user-supplied command prefix ("ghostty -e", "foot", "kitty --hold") into argv.
-// Supports single and double quotes; no other shell syntax.
+/**
+ * Splits a user-supplied command prefix ("ghostty -e", "foot", "kitty --hold") into argv.
+ * Supports single and double quotes; no other shell syntax.
+ * @param {string | null | undefined} text
+ * @returns {string[]}
+ */
 function splitArgs(text) {
+    /** @type {string[]} */
     const args = [];
     const re = /"([^"]*)"|'([^']*)'|(\S+)/g;
     const s = String(text || "");
@@ -367,8 +693,11 @@ function splitArgs(text) {
 
 // ---- Terminal selection -----------------------------------------------------------
 
-// Arguments that make each terminal run the command that follows them. Unknown terminals
-// get "-e", which most terminals accept.
+/**
+ * Arguments that make each terminal run the command that follows them. Unknown terminals
+ * get "-e", which most terminals accept.
+ * @type {Record<string, string[]>}
+ */
 const TERMINAL_EXEC_ARGS = {
     "ghostty": ["-e"],
     "kitty": [],
@@ -394,36 +723,55 @@ const TERMINAL_EXEC_ARGS = {
 // The order after xdg-terminal-exec matches DMS's own terminal list.
 const TERMINAL_FALLBACKS = ["xdg-terminal-exec", "ghostty", "kitty", "foot", "alacritty", "wezterm", "konsole", "gnome-terminal", "ptyxis", "xfce4-terminal", "xterm"];
 
+/**
+ * @param {string | null | undefined} path
+ * @returns {string} the part after the last "/"
+ */
 function baseName(path) {
     const s = String(path || "");
     return s.substring(s.lastIndexOf("/") + 1);
 }
 
+/**
+ * @param {string} program a terminal, as a name or a path
+ * @returns {string[]} a copy of its arguments from {@link TERMINAL_EXEC_ARGS}
+ */
 function terminalExecArgs(program) {
+    /** @type {string[] | undefined} */
     const args = TERMINAL_EXEC_ARGS[baseName(program)];
     return args ? args.slice() : ["-e"];
 }
 
-// Programs worth probing with `command -v`: the fallbacks plus whatever DMS and
-// $TERMINAL name.
+/**
+ * Programs worth probing with `command -v`: the fallbacks plus whatever DMS and
+ * $TERMINAL name.
+ * @param {string} dmsOverride DMS's terminal setting
+ * @param {string} envTerminal $TERMINAL
+ * @returns {string[]}
+ */
 function terminalCandidates(dmsOverride, envTerminal) {
     const first = [splitArgs(dmsOverride)[0], splitArgs(envTerminal)[0]].filter(p => p);
     return [...new Set([...first, ...TERMINAL_FALLBACKS])];
 }
 
-// Picks the terminal command prefix. Order: the plugin's custom command, the DMS terminal
-// setting, $TERMINAL, then the first installed fallback. `installed` lists the programs
-// found on PATH, or is null while unknown (then nothing is skipped).
-// Returns {argv, name, source, missing}: source is "custom", "dms", "env", "detected" or
-// "none" (argv empty); missing lists configured terminals that are not installed.
+/**
+ * Picks the terminal command prefix. Order: the plugin's custom command, the DMS terminal
+ * setting, $TERMINAL, then the first installed fallback. While `installed` is unknown,
+ * nothing is skipped.
+ * @param {TerminalOptions} opts
+ * @returns {Terminal}
+ */
 function resolveTerminal(opts) {
     const custom = splitArgs(opts.custom);
     if (custom.length)
         return { argv: custom, name: baseName(custom[0]), source: "custom", missing: [] };
 
     const installed = opts.installed ?? null;
+    /** @type {string[]} */
     const skipped = [];
-    for (const [command, source] of [[opts.dmsOverride, "dms"], [opts.envTerminal, "env"]]) {
+    /** @type {[string | undefined, TerminalSource][]} */
+    const configured = [[opts.dmsOverride, "dms"], [opts.envTerminal, "env"]];
+    for (const [command, source] of configured) {
         const words = splitArgs(command);
         if (!words.length)
             continue;
@@ -442,9 +790,14 @@ function resolveTerminal(opts) {
 
 // ---- System update method ---------------------------------------------------------
 
-// Setting values. "arch-update" covers Cachy-Update, CachyOS's fork of the same script.
+/** @type {UpdateMethod[]} */
 const UPDATE_METHODS = ["auto", "arch-update", "direct"];
 
+/**
+ * @param {string | null | undefined} command "cachy-update", "arch-update", or empty while
+ *     unknown or not installed
+ * @returns {string} product name, not translated
+ */
 function archUpdateName(command) {
     if (command === "cachy-update")
         return "Cachy-Update";
@@ -453,13 +806,15 @@ function archUpdateName(command) {
     return "Arch-Update / Cachy-Update";
 }
 
-// Resolves the update-method setting against the tools scripts/detect.sh found:
-// {archUpdate, aurHelper, flatpak}, or null while not detected yet (the update script then
-// resolves the method itself). Returns {method, label, aurHelper, flatpak, fallback}, where
-// method is what run-update.sh receives, label names the command that will run (a command
-// or product name, not translated), and fallback is true when the chosen tool is missing.
+/**
+ * Resolves the update-method setting against the tools scripts/detect.sh found.
+ * @param {string} setting saved value; anything but an {@link UpdateMethod} means "auto"
+ * @param {UpdateTools | null} tools null while not detected yet (the update script then
+ *     resolves the method itself)
+ * @returns {ResolvedUpdateMethod}
+ */
 function resolveUpdateMethod(setting, tools) {
-    const wanted = UPDATE_METHODS.includes(setting) ? setting : "auto";
+    const wanted = UPDATE_METHODS.find(m => m === setting) ?? "auto";
     if (!tools)
         return { method: wanted, label: "", aurHelper: "", flatpak: false, fallback: false };
     const archUpdate = tools.archUpdate || "";
@@ -475,10 +830,23 @@ function resolveUpdateMethod(setting, tools) {
     };
 }
 
+// ---- Text helpers -----------------------------------------------------------------------
+
+/**
+ * Escapes text for a StyledText with Text.StyledText formatting.
+ * @param {string | null | undefined} text
+ * @returns {string}
+ */
 function escapeHtml(text) {
     return String(text || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+/**
+ * @param {number} n
+ * @param {string} one
+ * @param {string} many
+ * @returns {string}
+ */
 function plural(n, one, many) {
     return n === 1 ? one : many;
 }
