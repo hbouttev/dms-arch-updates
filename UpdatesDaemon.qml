@@ -44,6 +44,9 @@ PluginComponent {
     readonly property bool incomplete: U.incomplete(sources)
     readonly property bool neverChecked: U.neverChecked(sources)
     readonly property bool updateRunning: Object.keys(runningUpdates).length > 0
+    // False when mise checks are off or the last check found no mise: "all" then runs the
+    // system update alone, and the views hide the mise actions.
+    readonly property bool miseInUse: miseEnabled && sources.mise.state !== "disabled"
 
     readonly property string scriptsDir: decodeURIComponent(Qt.resolvedUrl("scripts").toString().replace(/^file:\/\//, ""))
     // Terminal used for updates; see U.resolveTerminal.
@@ -119,6 +122,8 @@ PluginComponent {
     function launch(mode) {
         if (!updateModes.includes(mode))
             return false;
+        if (mode === "all" && !miseInUse)
+            mode = "system";
         const term = terminal.argv;
         if (term.length === 0) {
             ToastService.showError(I18n.trFor("archUpdates", "No terminal found"), I18n.trFor("archUpdates", "Set a terminal in DMS settings, in $TERMINAL, or in the Arch Updates plugin settings."));
@@ -419,7 +424,9 @@ PluginComponent {
         }
 
         function update(mode: string): string {
-            return root.launch(mode || "all") ? "launched " + (mode || "all") : "unknown mode; use system, mise, mise-bump or all";
+            const wanted = mode || "all";
+            const launched = wanted === "all" && !root.miseInUse ? "system (mise is not in use)" : wanted;
+            return root.launch(wanted) ? "launched " + launched : "unknown mode; use system, mise, mise-bump or all";
         }
 
         // Called by scripts/run-update.sh

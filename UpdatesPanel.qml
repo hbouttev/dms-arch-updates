@@ -28,6 +28,7 @@ ColumnLayout {
     readonly property int systemCount: daemon ? daemon.systemCount : 0
     readonly property int miseCount: daemon ? daemon.miseCount : 0
     readonly property int bumpCount: daemon ? daemon.bumpCount : 0
+    readonly property bool miseInUse: daemon ? daemon.miseInUse : false
     readonly property bool checking: daemon ? daemon.checking : false
     readonly property bool incomplete: daemon ? daemon.incomplete : false
     readonly property bool neverChecked: daemon ? daemon.neverChecked : true
@@ -209,7 +210,7 @@ ColumnLayout {
         }
 
         DButton {
-            visible: !root.compact || (root.systemCount > 0 && root.miseCount > 0)
+            visible: root.compact ? root.systemCount > 0 && root.miseCount > 0 : root.miseInUse
             text: I18n.trFor("archUpdates", "Update all")
             iconName: "system_update_alt"
             tooltipText: I18n.trFor("archUpdates", "%1, then mise upgrade --global, in one terminal").arg(root.ready ? root.daemon.systemUpdateDescription : "")
@@ -220,14 +221,16 @@ ColumnLayout {
             visible: !root.compact || root.systemCount > 0 || root.miseCount === 0
             text: root.compact ? I18n.trFor("archUpdates", "System") : (root.systemLabel ? I18n.trFor("archUpdates", "Run %1").arg(root.systemLabel) : I18n.trFor("archUpdates", "Update system"))
             iconName: "terminal"
-            backgroundColor: root.compact && root.miseCount === 0 ? Theme.primary : Theme.secondaryContainer
-            textColor: root.compact && root.miseCount === 0 ? Theme.onPrimary : Theme.onSecondaryContainer
+            // The main action when there is no Update all button next to it.
+            readonly property bool primary: root.compact ? root.miseCount === 0 : !root.miseInUse
+            backgroundColor: primary ? Theme.primary : Theme.secondaryContainer
+            textColor: primary ? Theme.onPrimary : Theme.onSecondaryContainer
             tooltipText: root.ready ? root.daemon.systemUpdateDescription : ""
             onClicked: root.run("system")
         }
 
         DButton {
-            visible: !root.compact || root.miseCount > 0
+            visible: root.compact ? root.miseCount > 0 : root.miseInUse
             text: root.compact ? I18n.trFor("archUpdates", "mise") : I18n.trFor("archUpdates", "Upgrade mise tools")
             iconName: "construction"
             backgroundColor: root.compact && root.systemCount === 0 ? Theme.primary : Theme.secondaryContainer

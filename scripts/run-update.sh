@@ -4,7 +4,7 @@
 #   run-update.sh system [method]   system update (repositories, AUR, Flatpak)
 #   run-update.sh mise              mise upgrade --global (stays within configured versions)
 #   run-update.sh mise-bump         mise upgrade --global --bump (moves past configured versions)
-#   run-update.sh all [method]      system, then mise
+#   run-update.sh all [method]      system, then mise if installed
 #
 # System update methods:
 #   arch-update  Arch-Update, or Cachy-Update on CachyOS: also shows Arch news and handles
@@ -136,11 +136,17 @@ case "$mode" in
 	all)
 		run_system
 		system_status=$?
-		run_mise
-		mise_status=$?
+		mise_status=0
+		# The daemon sends "system" when mise is not in use; this covers a check not run yet.
+		have_mise=0
+		command -v mise > /dev/null && have_mise=1
+		if ((have_mise)); then
+			run_mise
+			mise_status=$?
+		fi
 		heading "Summary"
 		result_line "$system_label" "$system_status"
-		result_line "mise" "$mise_status"
+		((have_mise)) && result_line "mise" "$mise_status"
 		status=$((system_status != 0 ? system_status : mise_status))
 		wait_for_key
 		;;

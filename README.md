@@ -69,7 +69,7 @@ DMS does not interrupt a transaction. The tools keep their normal output and pro
 | --- | --- |
 | `system` | the system update (see below) |
 | `mise` | `mise upgrade --global` |
-| `all` | the system update, then `mise upgrade --global` |
+| `all` | the system update, then `mise upgrade --global`; the system update alone when mise is not installed or its checks are off (*Update all* and the mise buttons are then hidden) |
 | `mise-bump` | `mise upgrade --global --bump --interactive` (choose tools; rewrites their requested versions) |
 
 The script tells the daemon when it starts and ends (`dms ipc call archUpdates started|finished`),
