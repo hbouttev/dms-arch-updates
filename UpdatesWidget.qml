@@ -21,7 +21,10 @@ PluginComponent {
     onShownChanged: setVisibilityOverride(shown)
     Component.onCompleted: setVisibilityOverride(shown)
 
-    popoutWidth: 440
+    // Follows the font size, like DMS's process list popout: 448 px at the default size.
+    readonly property real popoutSize: Math.round(Theme.fontSizeMedium * 32)
+
+    popoutWidth: popoutSize
 
     pillRightClickAction: (x, y, width, section, screen) => {
         if (popoutService)
@@ -36,7 +39,7 @@ PluginComponent {
                 width: parent.width
                 daemon: root.daemon
                 compact: true
-                maxListHeight: 440
+                maxListHeight: root.popoutSize
                 onLaunched: {
                     if (popout.closePopout)
                         popout.closePopout();
