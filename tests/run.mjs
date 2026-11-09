@@ -95,6 +95,17 @@ test("flags partial mise results", () => {
     assert.equal(merged.bumpFailed, true);
 });
 
+test("keeps only mise's warnings about tools", () => {
+    const stdout = '{"outdated":{},"bump":null}';
+    const progress = "mise uninstall aqua:pnpm/pnpm@12.17.0 remove ~/.cache/mise/pnpm/12.17.0\nmise uninstall aqua:pnpm/pnpm@12.17.0 ✓ done\n";
+    const self = "mise WARN  mise version 2026.11.4 available\nmise WARN  self-update is disabled for this install, update mise the same way you installed it\n";
+    assert.equal(U.classifyResult("mise", 0, stdout, progress + self, 120).warning, "");
+    const r = U.classifyResult("mise", 0, stdout, progress + self + "mise WARN  HTTP GET failed\n", 120);
+    assert.deepEqual([r.warning, r.partial], ["HTTP GET failed", false]);
+    // Other sources keep their stderr as it is.
+    assert.equal(U.classifyResult("aur", 0, "", "some note\n", 120).warning, "some note");
+});
+
 test("a failed check keeps the last successful items", () => {
     const ok = U.mergeResult(U.emptySource("repo"), U.classifyResult("repo", 0, "a 1 -> 2\nb 1 -> 2\n", "", 60), 1000);
     assert.equal(ok.state, "ok");

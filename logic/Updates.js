@@ -429,6 +429,21 @@ function scriptMessage(text, lines) {
 }
 
 /**
+ * The warning and error lines of a successful mise check. Its other stderr output (progress,
+ * an uninstall running at the same time) is not a warning. Its notices about a newer mise
+ * are left out too: the plugin follows the tools, and mise itself is updated with the
+ * system or by `mise self-update`, not by `mise upgrade`.
+ * @param {string} stderr
+ * @returns {string}
+ */
+function miseWarnings(stderr) {
+    return nonEmptyLines(stderr)
+        .filter(l => /^mise\s+(WARN|ERROR)\s/.test(l))
+        .filter(l => !/^mise\s+WARN\s+(mise version \S+ available|self-update is disabled)/.test(l))
+        .join("\n");
+}
+
+/**
  * A warning summary, plus whether it means some updates could not be checked.
  * @param {string} stderr
  * @returns {{ warning: string, partial: boolean }}
@@ -493,7 +508,7 @@ function classifyResult(id, exitCode, stdout, stderr, timeoutSec) {
         const message = e instanceof Error ? e.message : String(e);
         return errorResult(result, "parse", `Could not parse output: ${message}`, [message]);
     }
-    Object.assign(result, summarizeWarnings(stderr));
+    Object.assign(result, summarizeWarnings(id === "mise" ? miseWarnings(stderr) : stderr));
     if (result.bumpFailed)
         result.partial = true;
     return result;
