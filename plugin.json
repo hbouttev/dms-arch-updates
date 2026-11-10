@@ -2,7 +2,7 @@
     "id": "archUpdates",
     "name": "Arch Updates",
     "description": "Repository, AUR, Flatpak and mise update status for Arch Linux and Arch-based systems such as CachyOS. Checks contact your package mirrors, the AUR, Flatpak remotes and mise's sources. Updates run in your terminal with Arch-Update / Cachy-Update, or directly with your AUR helper or sudo pacman.",
-    "version": "0.4.3",
+    "version": "0.5.0",
     "author": "Hadrien Boutteville",
     "type": "composite",
     "capabilities": ["daemon", "dankbar-widget", "dash-tab"],

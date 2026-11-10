@@ -186,7 +186,8 @@ scripts/run-update.sh    update runner in the terminal
 tests/run.mjs            tests for logic/Updates.js and the message codes
 tests/typecheck.mjs      type check of logic/Updates.js
 jsconfig.json            TypeScript options for that check and for editors
-assets/                 screenshots for the README; popout.png is the plugin registry's
+assets/                  screenshots for the README; popout.png is the plugin registry's
+CHANGELOG.md             what changed for users in each version
 ```
 
 ```sh
