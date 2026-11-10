@@ -90,6 +90,7 @@ ColumnLayout {
         checking: root.checking
         incomplete: root.incomplete
         neverChecked: root.neverChecked
+        live: root.live
         titleText: root.titleText
         subtitleText: root.subtitleText
         onRefreshRequested: root.daemon.checkNow("manual")

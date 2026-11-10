@@ -17,6 +17,8 @@ DCard {
     property bool checking: false
     property bool incomplete: false
     property bool neverChecked: true
+    // False while not on screen (the dash keeps its content alive when closed).
+    property bool live: true
     property string titleText: ""
     property string subtitleText: ""
 
@@ -43,7 +45,6 @@ DCard {
             Layout.preferredWidth: Math.round(Theme.iconSize * (root.compact ? 2.5 : 3.5))
             Layout.preferredHeight: Layout.preferredWidth
 
-            // Cookie shape while updates wait, a plain circle otherwise.
             DMaterialShape {
                 anchors.fill: parent
                 visible: !root.checking
@@ -58,9 +59,9 @@ DCard {
                 }
             }
 
-            // Created only while checking, like the shell's own loading indicators: it paints
-            // its shapes once when created, and a copy kept hidden in the dashboard could
-            // come back blank. The indicator's shape fills only 38/48 of its size, so it is
+            // Created only while checking on screen, like the shell's own loading indicators:
+            // it paints its shapes once when created, and a copy kept hidden in the dashboard
+            // could come back blank. The indicator's shape fills only 38/48 of its size, so it is
             // drawn larger to match the badge. No icon inside: the shapes shift as they morph,
             // and a still icon would look off-center, which is why the shell never adds one.
             Loader {
@@ -68,7 +69,7 @@ DCard {
                 anchors.centerIn: parent
                 width: Math.round(parent.width * 48 / 38)
                 height: width
-                active: root.checking
+                active: root.checking && root.live
                 sourceComponent: DLoadingIndicator {
                     size: indicator.width
                     color: Theme.primary
