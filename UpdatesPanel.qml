@@ -81,45 +81,18 @@ ColumnLayout {
 
     // ---- Header -------------------------------------------------------------------
 
-    // Like the shell's update popout: a colored title, a status line and a refresh button.
-    RowLayout {
+    UpdatesHero {
         Layout.fillWidth: true
-        spacing: Theme.spacingM
-
-        ColumnLayout {
-            Layout.fillWidth: true
-            spacing: Theme.spacingXS
-
-            StyledText {
-                Layout.fillWidth: true
-                text: root.titleText
-                wrapMode: Text.Wrap
-                font.pixelSize: Theme.fontSizeLarge
-                font.weight: Theme.fontWeightMedium
-                color: root.total === 0 && (root.incomplete || !root.ready) ? Theme.warning : Theme.primary
-            }
-
-            StyledText {
-                Layout.fillWidth: true
-                visible: text.length > 0
-                text: root.subtitleText
-                wrapMode: Text.Wrap
-                font.pixelSize: Theme.fontSizeSmall
-                color: Theme.surfaceVariantText
-            }
-        }
-
-        DRefreshButton {
-            Layout.alignment: Qt.AlignTop
-            visible: root.ready
-            busy: root.checking
-            buttonSize: Theme.buttonHeightXS
-            iconSize: Theme.iconSizeSmall
-            iconColor: Theme.surfaceText
-            backgroundColor: Theme.foregroundColor(Theme.chipSurface)
-            tooltipText: I18n.trFor("archUpdates", "Check for updates")
-            onClicked: root.daemon.checkNow("manual")
-        }
+        Layout.preferredHeight: implicitHeight
+        compact: root.compact
+        ready: root.ready
+        total: root.total
+        checking: root.checking
+        incomplete: root.incomplete
+        neverChecked: root.neverChecked
+        titleText: root.titleText
+        subtitleText: root.subtitleText
+        onRefreshRequested: root.daemon.checkNow("manual")
     }
 
     StyledRect {
@@ -127,7 +100,7 @@ ColumnLayout {
         visible: root.ready && root.daemon.updateRunning
         implicitHeight: runningRow.implicitHeight + Theme.spacingS * 2
         radius: Theme.cornerRadiusLarge
-        color: Theme.primaryContainer
+        color: Theme.secondaryContainer
 
         RowLayout {
             id: runningRow
@@ -138,7 +111,7 @@ ColumnLayout {
             DIcon {
                 name: "terminal"
                 size: Theme.iconSizeSmall
-                color: Theme.onPrimaryContainer
+                color: Theme.onSecondaryContainer
             }
 
             StyledText {
@@ -146,7 +119,7 @@ ColumnLayout {
                 text: I18n.trFor("archUpdates", "An update is running in a terminal. Results refresh when it ends.")
                 wrapMode: Text.Wrap
                 font.pixelSize: Theme.fontSizeSmall
-                color: Theme.onPrimaryContainer
+                color: Theme.onSecondaryContainer
             }
         }
     }
