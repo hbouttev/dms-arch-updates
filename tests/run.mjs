@@ -214,6 +214,8 @@ test("formats times", () => {
     assert.equal(U.formatTime(0, now), "");
     assert.equal(U.formatTime(new Date(2026, 10, 6, 9, 5).getTime(), now), "09:05");
     assert.equal(U.formatTime(new Date(2026, 10, 4, 9, 5).getTime(), now), "2026-11-04 09:05");
+    assert.equal(U.formatClock(0), "");
+    assert.equal(U.formatClock(new Date(2026, 10, 7, 0, 29).getTime()), "00:29");
 });
 
 test("escapes notes rendered as rich text", () => {

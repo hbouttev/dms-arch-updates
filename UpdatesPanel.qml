@@ -68,7 +68,7 @@ ColumnLayout {
         if (incomplete && total > 0)
             parts.push(I18n.trFor("archUpdates", "some checks failed"));
         if (!compact && !checking && daemon.nextCheckAt > now)
-            parts.push(I18n.trFor("archUpdates", "next at %1").arg(U.formatTime(daemon.nextCheckAt, now)));
+            parts.push(I18n.trFor("archUpdates", "next at %1").arg(U.formatClock(daemon.nextCheckAt)));
         return parts.join(" · ");
     }
 

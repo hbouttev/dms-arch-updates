@@ -670,6 +670,19 @@ function formatTime(ms, now) {
 }
 
 /**
+ * A time of day ("00:29"), for the next check: it is never more than a day away (the longest
+ * interval is 24 hours), so the date would only make it harder to read.
+ * @param {number} ms
+ * @returns {string}
+ */
+function formatClock(ms) {
+    if (!ms)
+        return "";
+    const d = new Date(ms);
+    return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
+/**
  * Splits a user-supplied command prefix ("ghostty -e", "foot", "kitty --hold") into argv.
  * Supports single and double quotes; no other shell syntax.
  * @param {string | null | undefined} text
