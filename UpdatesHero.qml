@@ -6,7 +6,8 @@ import qs.DCommon.Widgets
 // The summary card on top of the popout and the dashboard tab, like the shell's hero cards
 // (battery popout, Weather tab): an icon in an expressive shape, the status as a title, the
 // check details and the refresh button. Tinted with the primary container color only when
-// there is something to update, so it draws the eye only then.
+// there is something to update, so it draws the eye only then. While a check runs, the shape
+// becomes the shell's morphing loading indicator.
 DCard {
     id: root
 
@@ -23,6 +24,7 @@ DCard {
 
     readonly property bool hasUpdates: total > 0
     readonly property bool troubled: !hasUpdates && (incomplete || !ready)
+    readonly property string iconName: hasUpdates ? "system_update_alt" : (troubled ? "error" : (neverChecked ? "schedule" : "check"))
 
     tone: hasUpdates ? "primary" : ""
     restRadius: Theme.cornerRadiusLarge
@@ -44,14 +46,32 @@ DCard {
             // Cookie shape while updates wait, a plain circle otherwise.
             DMaterialShape {
                 anchors.fill: parent
+                visible: !root.checking
                 shape: root.hasUpdates ? "cookie9" : "circle"
                 color: root.hasUpdates ? Theme.primary : (root.troubled ? Theme.withAlpha(Theme.warning, 0.24) : Theme.secondaryContainer)
 
                 DIcon {
                     anchors.centerIn: parent
-                    name: root.hasUpdates ? "system_update_alt" : (root.troubled ? "error" : (root.neverChecked ? "schedule" : "check"))
+                    name: root.iconName
                     size: Math.round(parent.width / 2)
                     color: root.hasUpdates ? Theme.onPrimary : (root.troubled ? Theme.warning : Theme.onSecondaryContainer)
+                }
+            }
+
+            // Created only while checking, like the shell's own loading indicators: it paints
+            // its shapes once when created, and a copy kept hidden in the dashboard could
+            // come back blank. The indicator's shape fills only 38/48 of its size, so it is
+            // drawn larger to match the badge. No icon inside: the shapes shift as they morph,
+            // and a still icon would look off-center, which is why the shell never adds one.
+            Loader {
+                id: indicator
+                anchors.centerIn: parent
+                width: Math.round(parent.width * 48 / 38)
+                height: width
+                active: root.checking
+                sourceComponent: DLoadingIndicator {
+                    size: indicator.width
+                    color: Theme.primary
                 }
             }
         }
@@ -80,10 +100,11 @@ DCard {
             }
         }
 
+        // The badge shows the check running, so the button only greys out meanwhile.
         DRefreshButton {
             Layout.alignment: Qt.AlignVCenter
             visible: root.ready
-            busy: root.checking
+            enabled: !root.checking
             iconColor: root.contentColor
             tooltipText: I18n.trFor("archUpdates", "Check for updates")
             onClicked: root.refreshRequested()
