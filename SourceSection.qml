@@ -86,22 +86,25 @@ DListRow {
                 text: String(root.count)
             }
 
+            // While checking, the spinner alone takes the status's place: the hero card says
+            // "Checking…" in words, and each source finishes on its own.
             DSpinner {
-                id: spinner
                 visible: root.checking
                 running: visible && root.live
-                anchors.right: statusLabel.left
-                anchors.rightMargin: Theme.spacingXS
+                anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
                 size: Theme.iconSizeSmall
+                Accessible.role: Accessible.ProgressBar
+                Accessible.name: root.statusText
             }
 
             StyledText {
                 id: statusLabel
+                visible: !root.checking
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.left: countBadge.visible ? countBadge.right : titleText.right
-                anchors.leftMargin: Theme.spacingM + (spinner.visible ? spinner.width + Theme.spacingXS : 0)
+                anchors.leftMargin: Theme.spacingM
                 horizontalAlignment: Text.AlignRight
                 elide: Text.ElideRight
                 text: root.statusText
