@@ -4,8 +4,9 @@ import qs.DCommon.Widgets
 import "logic/Updates.js" as U
 
 // One update source (repositories, AUR, Flatpak or mise): status line, problems and the
-// list of available updates.
-StyledRect {
+// list of available updates. The sources form one grouped list, like the shell's own update
+// list: each is a segment, with the outer corners rounded on the first and last.
+DListRow {
     id: root
 
     property string sourceId: ""
@@ -40,18 +41,16 @@ StyledRect {
         }
     }
 
-    readonly property color statusColor: failed ? Theme.error : (source.partial ? Theme.warning : Theme.surfaceVariantText)
+    readonly property color statusColor: failed ? Theme.error : (source.partial ? Theme.warning : supportingContentColor)
 
     width: parent ? parent.width : 0
     implicitHeight: content.implicitHeight + Theme.spacingM * 2
-    radius: Theme.cornerRadius
-    color: Theme.surfaceContainerHigh
 
     Column {
         id: content
-        x: Theme.spacingM
+        x: Theme.spacingL
         y: Theme.spacingM
-        width: parent.width - Theme.spacingM * 2
+        width: parent.width - Theme.spacingL * 2
         spacing: Theme.spacingS
 
         Item {
@@ -64,7 +63,7 @@ StyledRect {
                 anchors.verticalCenter: parent.verticalCenter
                 name: U.SOURCE_ICONS[root.sourceId] || "help"
                 size: Theme.iconSizeMedium
-                color: root.count > 0 ? Theme.primary : Theme.surfaceVariantText
+                color: root.count > 0 ? Theme.primary : root.supportingContentColor
             }
 
             StyledText {
@@ -75,28 +74,16 @@ StyledRect {
                 text: root.texts.sourceLabel(root.sourceId)
                 font.pixelSize: Theme.fontSizeMedium
                 font.weight: Theme.fontWeightMedium
-                color: Theme.surfaceText
+                color: root.contentColor
             }
 
-            StyledRect {
+            DBadge {
                 id: countBadge
                 visible: root.count > 0
                 anchors.left: titleText.right
                 anchors.leftMargin: Theme.spacingS
                 anchors.verticalCenter: parent.verticalCenter
-                height: countText.implicitHeight + Theme.spacingXXS * 2
-                width: Math.max(height, countText.implicitWidth + Theme.spacingS * 2)
-                radius: height / 2
-                color: Theme.primary
-
-                StyledText {
-                    id: countText
-                    anchors.centerIn: parent
-                    text: root.count
-                    font.pixelSize: Theme.fontSizeSmall
-                    font.weight: Theme.fontWeightMedium
-                    color: Theme.onPrimary
-                }
+                text: String(root.count)
             }
 
             DSpinner {
@@ -142,7 +129,7 @@ StyledRect {
             maximumLineCount: 4
             elide: Text.ElideRight
             font.pixelSize: Theme.fontSizeSmall
-            color: root.source.partial ? Theme.warning : Theme.surfaceVariantText
+            color: root.source.partial ? Theme.warning : root.supportingContentColor
         }
 
         StyledText {
@@ -151,7 +138,7 @@ StyledRect {
             text: root.reasonText
             wrapMode: Text.Wrap
             font.pixelSize: Theme.fontSizeSmall
-            color: Theme.surfaceVariantText
+            color: root.supportingContentColor
         }
 
         Column {
@@ -180,7 +167,7 @@ StyledRect {
                 text: I18n.trFor("archUpdates", "Beyond configured versions (not counted)")
                 font.pixelSize: Theme.fontSizeSmall
                 font.weight: Theme.fontWeightMedium
-                color: Theme.surfaceVariantText
+                color: root.supportingContentColor
             }
 
             Repeater {

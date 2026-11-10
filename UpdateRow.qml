@@ -45,7 +45,6 @@ Item {
         elide: Text.ElideLeft
         text: root.versions
         font.pixelSize: Theme.fontSizeSmall
-        font.family: Theme.monoFontFamily
         color: Theme.surfaceVariantText
     }
 }

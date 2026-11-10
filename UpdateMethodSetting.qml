@@ -79,78 +79,93 @@ Column {
         color: Theme.surfaceVariantText
     }
 
-    Repeater {
-        model: root.choices
+    // The choices form a grouped list, like the shell's lists: one segment each, the outer
+    // corners rounded on the first and last, the chosen one in the secondary container color.
+    // The others use the nested surface the settings pages give controls inside a row.
+    Column {
+        width: root.width
+        spacing: Theme.groupedListGap
 
-        delegate: StyledRect {
-            id: row
+        Repeater {
+            model: root.choices
 
-            required property var modelData
-            readonly property bool selected: root.value === modelData.value
+            delegate: StyledRect {
+                id: row
 
-            width: root.width
-            implicitHeight: rowContent.implicitHeight + Theme.spacingM * 2
-            radius: Theme.cornerRadius
-            color: selected ? Theme.surfaceContainerHighest : "transparent"
-            opacity: modelData.available ? 1 : 0.5
+                required property var modelData
+                required property int index
+                readonly property bool selected: root.value === modelData.value
+                readonly property real outerRadius: Theme.groupedListOuterRadius
+                readonly property real innerRadius: Theme.groupedListInnerRadius
 
-            border.width: activeFocus ? Theme.focusRingWidth : 0
-            border.color: Theme.focusRingColor
+                width: root.width
+                implicitHeight: rowContent.implicitHeight + Theme.spacingM * 2
+                topLeftRadius: index === 0 ? outerRadius : innerRadius
+                topRightRadius: topLeftRadius
+                bottomLeftRadius: index === root.choices.length - 1 ? outerRadius : innerRadius
+                bottomRightRadius: bottomLeftRadius
+                color: selected ? Theme.secondaryContainer : Theme.foregroundColor(Theme.chipSurfaceNested, Theme.isFloatingWindow(row))
+                opacity: modelData.available ? 1 : 0.5
 
-            activeFocusOnTab: modelData.available
-            Keys.onSpacePressed: root.choose(modelData.value)
-            Keys.onReturnPressed: root.choose(modelData.value)
+                border.width: activeFocus ? Theme.focusRingWidth : 0
+                border.color: Theme.focusRingColor
 
-            Accessible.role: Accessible.RadioButton
-            Accessible.name: modelData.title
-            Accessible.description: modelData.description
-            Accessible.checked: selected
-            Accessible.onPressAction: if (modelData.available) root.choose(modelData.value)
+                activeFocusOnTab: modelData.available
+                Keys.onSpacePressed: root.choose(modelData.value)
+                Keys.onReturnPressed: root.choose(modelData.value)
 
-            Row {
-                id: rowContent
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.leftMargin: Theme.spacingM
-                anchors.rightMargin: Theme.spacingM
-                spacing: Theme.spacingM
+                Accessible.role: Accessible.RadioButton
+                Accessible.name: modelData.title
+                Accessible.description: modelData.description
+                Accessible.checked: selected
+                Accessible.onPressAction: if (modelData.available) root.choose(modelData.value)
 
-                DIcon {
+                Row {
+                    id: rowContent
+                    anchors.left: parent.left
+                    anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
-                    name: row.selected ? "radio_button_checked" : "radio_button_unchecked"
-                    size: Theme.iconSize
-                    color: row.selected ? Theme.primary : Theme.surfaceVariantText
-                }
+                    anchors.leftMargin: Theme.spacingM
+                    anchors.rightMargin: Theme.spacingM
+                    spacing: Theme.spacingM
 
-                Column {
-                    width: parent.width - Theme.iconSize - parent.spacing
-                    spacing: Theme.spacingXXS
-
-                    StyledText {
-                        width: parent.width
-                        text: row.modelData.title
-                        font.pixelSize: Theme.fontSizeMedium
-                        color: Theme.surfaceText
+                    DIcon {
+                        anchors.verticalCenter: parent.verticalCenter
+                        name: row.selected ? "radio_button_checked" : "radio_button_unchecked"
+                        size: Theme.iconSize
+                        color: row.selected ? Theme.onSecondaryContainer : Theme.surfaceVariantText
                     }
 
-                    StyledText {
-                        width: parent.width
-                        text: row.modelData.description
-                        wrapMode: Text.WordWrap
-                        font.pixelSize: Theme.fontSizeSmall
-                        color: Theme.surfaceVariantText
+                    Column {
+                        width: parent.width - Theme.iconSize - parent.spacing
+                        spacing: Theme.spacingXXS
+
+                        StyledText {
+                            width: parent.width
+                            text: row.modelData.title
+                            font.pixelSize: Theme.fontSizeMedium
+                            font.weight: row.selected ? Theme.fontWeightMedium : Font.Normal
+                            color: row.selected ? Theme.onSecondaryContainer : Theme.surfaceText
+                        }
+
+                        StyledText {
+                            width: parent.width
+                            text: row.modelData.description
+                            wrapMode: Text.WordWrap
+                            font.pixelSize: Theme.fontSizeSmall
+                            color: row.selected ? Theme.onSecondaryContainer : Theme.surfaceVariantText
+                        }
                     }
                 }
-            }
 
-            // Hover, press and focus feedback, and the click
-            StateLayer {
-                disabled: !row.modelData.available
-                enabled: row.modelData.available
-                focused: row.activeFocus
-                stateColor: Theme.surfaceText
-                onClicked: root.choose(row.modelData.value)
+                // Hover, press and focus feedback, and the click
+                StateLayer {
+                    disabled: !row.modelData.available
+                    enabled: row.modelData.available
+                    focused: row.activeFocus
+                    stateColor: row.selected ? Theme.onSecondaryContainer : Theme.surfaceText
+                    onClicked: root.choose(row.modelData.value)
+                }
             }
         }
     }

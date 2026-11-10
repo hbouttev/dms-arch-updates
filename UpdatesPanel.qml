@@ -81,28 +81,22 @@ ColumnLayout {
 
     // ---- Header -------------------------------------------------------------------
 
+    // Like the shell's update popout: a colored title, a status line and a refresh button.
     RowLayout {
         Layout.fillWidth: true
         spacing: Theme.spacingM
 
-        DIcon {
-            Layout.alignment: Qt.AlignVCenter
-            name: root.total > 0 ? "system_update_alt" : (root.incomplete || !root.ready ? "error" : (root.neverChecked ? "schedule" : "check_circle"))
-            size: Theme.iconSize
-            color: root.total > 0 ? Theme.primary : (root.incomplete || !root.ready ? Theme.warning : Theme.surfaceVariantText)
-        }
-
         ColumnLayout {
             Layout.fillWidth: true
-            spacing: 0
+            spacing: Theme.spacingXS
 
             StyledText {
                 Layout.fillWidth: true
                 text: root.titleText
-                elide: Text.ElideRight
+                wrapMode: Text.Wrap
                 font.pixelSize: Theme.fontSizeLarge
                 font.weight: Theme.fontWeightMedium
-                color: Theme.surfaceText
+                color: root.total === 0 && (root.incomplete || !root.ready) ? Theme.warning : Theme.primary
             }
 
             StyledText {
@@ -115,14 +109,15 @@ ColumnLayout {
             }
         }
 
-        DActionButton {
-            Layout.alignment: Qt.AlignVCenter
-            visible: root.ready && root.compact
-            enabled: !root.checking
-            iconName: "refresh"
+        DRefreshButton {
+            Layout.alignment: Qt.AlignTop
+            visible: root.ready
+            busy: root.checking
             buttonSize: Theme.buttonHeightXS
+            iconSize: Theme.iconSizeSmall
+            iconColor: Theme.surfaceText
+            backgroundColor: Theme.foregroundColor(Theme.chipSurface)
             tooltipText: I18n.trFor("archUpdates", "Check for updates")
-            Accessible.name: tooltipText
             onClicked: root.daemon.checkNow("manual")
         }
     }
@@ -131,7 +126,7 @@ ColumnLayout {
         Layout.fillWidth: true
         visible: root.ready && root.daemon.updateRunning
         implicitHeight: runningRow.implicitHeight + Theme.spacingS * 2
-        radius: Theme.cornerRadius
+        radius: Theme.cornerRadiusLarge
         color: Theme.primaryContainer
 
         RowLayout {
@@ -174,12 +169,17 @@ ColumnLayout {
         Column {
             id: listColumn
             width: list.width
-            spacing: Theme.spacingS
+            spacing: Theme.groupedListGap
 
             Repeater {
                 model: root.visibleIds
 
                 delegate: SourceSection {
+                    required property string modelData
+                    required property int index
+
+                    firstInGroup: index === 0
+                    lastInGroup: index === root.visibleIds.length - 1
                     sourceId: modelData
                     source: root.sources[modelData]
                     checking: root.checkingIds.includes(modelData)
@@ -192,22 +192,14 @@ ColumnLayout {
     }
 
     // ---- Actions ------------------------------------------------------------------
+    // Right-aligned like the shell's dialogs and popouts, the main action rightmost: one
+    // filled button, tonal ones for the other updates, a text button for the rare bump.
 
     Flow {
         Layout.fillWidth: true
         visible: root.ready
+        layoutDirection: Qt.RightToLeft
         spacing: Theme.spacingS
-
-        DButton {
-            visible: !root.compact
-            enabled: !root.checking
-            busy: root.checking
-            text: root.checking ? I18n.trFor("archUpdates", "Checking…") : I18n.trFor("archUpdates", "Check for updates")
-            iconName: "refresh"
-            backgroundColor: Theme.surfaceContainerHighest
-            textColor: Theme.surfaceText
-            onClicked: root.daemon.checkNow("manual")
-        }
 
         DButton {
             visible: root.compact ? root.systemCount > 0 && root.miseCount > 0 : root.miseInUse
@@ -223,8 +215,8 @@ ColumnLayout {
             iconName: "terminal"
             // The main action when there is no Update all button next to it.
             readonly property bool primary: root.compact ? root.miseCount === 0 : !root.miseInUse
-            backgroundColor: primary ? Theme.primary : Theme.secondaryContainer
-            textColor: primary ? Theme.onPrimary : Theme.onSecondaryContainer
+            backgroundColor: primary ? Theme.buttonBg : Theme.secondaryContainer
+            textColor: primary ? Theme.buttonText : Theme.onSecondaryContainer
             tooltipText: root.ready ? root.daemon.systemUpdateDescription : ""
             onClicked: root.run("system")
         }
@@ -233,8 +225,9 @@ ColumnLayout {
             visible: root.compact ? root.miseCount > 0 : root.miseInUse
             text: root.compact ? I18n.trFor("archUpdates", "mise") : I18n.trFor("archUpdates", "Upgrade mise tools")
             iconName: "construction"
-            backgroundColor: root.compact && root.systemCount === 0 ? Theme.primary : Theme.secondaryContainer
-            textColor: root.compact && root.systemCount === 0 ? Theme.onPrimary : Theme.onSecondaryContainer
+            readonly property bool primary: root.compact && root.systemCount === 0
+            backgroundColor: primary ? Theme.buttonBg : Theme.secondaryContainer
+            textColor: primary ? Theme.buttonText : Theme.onSecondaryContainer
             tooltipText: I18n.trFor("archUpdates", "mise upgrade --global, within the versions in your config")
             onClicked: root.run("mise")
         }
@@ -243,8 +236,8 @@ ColumnLayout {
             visible: !root.compact && root.bumpCount > 0
             text: I18n.trFor("archUpdates", "Bump mise versions…")
             iconName: "upgrade"
-            backgroundColor: Theme.surfaceContainerHighest
-            textColor: Theme.surfaceText
+            backgroundColor: "transparent"
+            textColor: Theme.primary
             tooltipText: I18n.trFor("archUpdates", "mise upgrade --global --bump --interactive: pick tools to move past their configured versions (rewrites config.toml)")
             onClicked: root.run("mise-bump")
         }

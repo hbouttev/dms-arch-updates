@@ -24,7 +24,7 @@ This is a community plugin, not affiliated with Arch Linux or CachyOS.
 | --- | --- |
 | Bar pill | Icon and update count. Hidden, taking no space, when there is nothing to update. Background checks never make it appear or flash. Click: popout. Right click: dashboard tab. The icon turns to the warning color if some check failed. |
 | Popout | Sources with updates or problems, a re-check button, and *Update all* / *System* / *mise*. |
-| Dashboard tab *Updates* | Every source with its status, last check time, errors and warnings; *Check for updates*, the same update actions, and *Bump mise versions…* when upgrades exist past the configured versions. Available while the pill is hidden: `dms ipc call dash open plugin_archUpdates`. |
+| Dashboard tab *Updates* | Every source with its status, last check time, errors and warnings; a re-check button, the same update actions, and *Bump mise versions…* when upgrades exist past the configured versions. Available while the pill is hidden: `dms ipc call dash open plugin_archUpdates`. |
 | Settings | Settings → Plugins → Arch Updates: system update method, check interval, timeout, terminal override, mise options. |
 
 <img src="assets/dashboard.png" width="825" alt="The Updates dashboard tab: every source with its status and last check time, and the Check for updates, Update all, Run Cachy-Update and Upgrade mise tools buttons">
