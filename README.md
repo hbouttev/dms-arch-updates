@@ -16,18 +16,18 @@ The plugin only checks, displays and launches. It never runs an update on its ow
 
 This is a community plugin, not affiliated with Arch Linux or CachyOS.
 
-<img src="assets/popout.png" width="446" alt="The bar pill showing 10 updates, and its popout listing repository, Flatpak and mise updates with the Update all, System and mise buttons">
+<img src="assets/popout.png" width="422" alt="The bar pill showing 6 updates, and its popout: a summary card with the update count and a re-check button, then repository, AUR, Flatpak and mise updates, and the mise, System and Update all buttons">
 
 ## Surfaces
 
 | Surface | Behaviour |
 | --- | --- |
 | Bar pill | Icon and update count. Hidden, taking no space, when there is nothing to update. Background checks never make it appear or flash. Click: popout. Right click: dashboard tab. The icon is in the accent color, or the warning color if some check failed. |
-| Popout | Sources with updates or problems, a re-check button, and *Update all* / *System* / *mise*. |
-| Dashboard tab *Updates* | Every source with its status, last check time, errors and warnings; a re-check button, the same update actions, and *Bump mise versions…* when upgrades exist past the configured versions. Available while the pill is hidden: `dms ipc call dash open plugin_archUpdates`. |
+| Popout | A summary card (update count, last check, re-check button), the sources with updates or problems, and *Update all* / *System* / *mise*. |
+| Dashboard tab *Updates* | The same summary card, with the next check time; every source with its status, last check time, errors and warnings; the same update actions, and *Bump mise versions…* when upgrades exist past the configured versions. Available while the pill is hidden: `dms ipc call dash open plugin_archUpdates`. |
 | Settings | Settings → Plugins → Arch Updates: system update method, check interval, timeout, terminal override, mise options. |
 
-<img src="assets/dashboard.png" width="825" alt="The Updates dashboard tab: every source with its status and last check time, and the Check for updates, Update all, Run Cachy-Update and Upgrade mise tools buttons">
+<img src="assets/dashboard.png" width="822" alt="The Updates dashboard tab: the summary card with the update count and next check time, every source with its updates and last check time, and the Upgrade mise tools, Run Cachy-Update and Update all buttons">
 
 ## How checking works
 
@@ -88,7 +88,7 @@ Settings → Plugins → Arch Updates → *System update method*:
 The buttons name the command they run (*Run Cachy-Update*, *Run yay -Syu*…). If the chosen tool
 is uninstalled later, updates fall back to *Direct* and the settings page says so.
 
-<img src="assets/settings.png" width="624" alt="The plugin's settings page: system update method (Automatic, Cachy-Update, Direct), check interval, timeout, terminal command and mise options">
+<img src="assets/settings.png" width="614" alt="The plugin's settings page: system update method (Automatic, Cachy-Update, Direct), check interval, timeout, terminal command and mise options">
 
 ### Terminal
 
