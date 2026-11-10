@@ -64,6 +64,8 @@ DCard {
             // could come back blank. The indicator's shape fills only 38/48 of its size, so it is
             // drawn larger to match the badge. No icon inside: the shapes shift as they morph,
             // and a still icon would look off-center, which is why the shell never adds one.
+            // It takes the badge's color, so the badge comes alive rather than an accent
+            // shape appearing for a routine check; the faint warning tint is too pale for it.
             Loader {
                 id: indicator
                 anchors.centerIn: parent
@@ -72,7 +74,7 @@ DCard {
                 active: root.checking && root.live
                 sourceComponent: DLoadingIndicator {
                     size: indicator.width
-                    color: Theme.primary
+                    color: root.hasUpdates ? Theme.primary : Theme.secondaryContainer
                 }
             }
         }
