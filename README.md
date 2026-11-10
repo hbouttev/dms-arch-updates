@@ -172,7 +172,8 @@ UpdatesDaemon.qml        scheduling, checks, state, persistence, IPC, launching
 UpdatesWidget.qml        bar pill and popout
 UpdatesTab.qml           dashboard tab
 UpdatesPanel.qml         the view shared by the popout (compact) and the tab
-SourceSection.qml        one source card; UpdateRow.qml: one update line
+UpdatesHero.qml          the summary card on top of that view
+SourceSection.qml        one source in the grouped list; UpdateRow.qml: one update line
 CheckProcess.qml         Process wrapper that reports exit code, stdout and stderr together
 UpdatesSettings.qml      settings page; UpdateMethodSetting.qml: the update method choice
 UpdateTexts.qml          all wording built from codes and values (translatable)
