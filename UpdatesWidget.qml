@@ -17,6 +17,9 @@ PluginComponent {
     // Only the count decides visibility: checks in progress or failed checks never make
     // a hidden pill appear.
     readonly property bool shown: count > 0
+    // Primary, like the shell's own update pill when updates are available (the pill only
+    // shows then); the warning color when some check failed.
+    readonly property color iconColor: incomplete ? Theme.warning : Theme.primary
 
     onShownChanged: setVisibilityOverride(shown)
     Component.onCompleted: setVisibilityOverride(shown)
@@ -56,7 +59,7 @@ PluginComponent {
                 anchors.verticalCenter: parent.verticalCenter
                 name: "system_update_alt"
                 size: root.iconSize
-                color: root.incomplete ? Theme.warning : Theme.widgetIconColor
+                color: root.iconColor
             }
 
             StyledText {
@@ -76,7 +79,7 @@ PluginComponent {
                 anchors.horizontalCenter: parent.horizontalCenter
                 name: "system_update_alt"
                 size: root.iconSize
-                color: root.incomplete ? Theme.warning : Theme.widgetIconColor
+                color: root.iconColor
             }
 
             StyledText {
