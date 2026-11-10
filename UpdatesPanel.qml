@@ -96,23 +96,25 @@ ColumnLayout {
         onRefreshRequested: root.daemon.checkNow("manual")
     }
 
-    StyledRect {
+    DCard {
+        id: runningCard
         Layout.fillWidth: true
+        Layout.preferredHeight: implicitHeight
         visible: root.ready && root.daemon.updateRunning
-        implicitHeight: runningRow.implicitHeight + Theme.spacingS * 2
-        radius: Theme.cornerRadiusLarge
-        color: Theme.secondaryContainer
+        tone: "secondary"
+        restRadius: Theme.cornerRadiusLarge
+        pad: Theme.spacingS
+        implicitHeight: runningRow.implicitHeight + pad * 2
 
         RowLayout {
             id: runningRow
-            anchors.fill: parent
-            anchors.margins: Theme.spacingS
+            width: parent.width
             spacing: Theme.spacingS
 
             DIcon {
                 name: "terminal"
                 size: Theme.iconSizeSmall
-                color: Theme.onSecondaryContainer
+                color: runningCard.contentColor
             }
 
             StyledText {
@@ -120,7 +122,7 @@ ColumnLayout {
                 text: I18n.trFor("archUpdates", "An update is running in a terminal. Results refresh when it ends.")
                 wrapMode: Text.Wrap
                 font.pixelSize: Theme.fontSizeSmall
-                color: Theme.onSecondaryContainer
+                color: runningCard.contentColor
             }
         }
     }
